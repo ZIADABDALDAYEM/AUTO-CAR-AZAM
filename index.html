@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+    <title>أوتو كار عزام | AUTO CAR AZAM</title>
+    <meta name="description" content="أقوى عروض السيارات المستعملة، كسر الزيرو، والسيارات الجديدة في مصر بأفضل الأسعار.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+    /* ============================================================
+       ROOT VARIABLES & RESET
+    ============================================================ */
+    :root {
+        --primary-dark:    #0a0a0c;
+        --secondary-dark:  #141419;
+        --accent:          #b89047;
+        --accent-dark:     #8c6a28;
+        --text-light:      #f8f9fa;
+        --text-muted:      #a0a0a5;
+        --card-bg:         #1c1c24;
+        --border-subtle:   rgba(255,255,255,0.07);
+        --transition:      all 0.3s ease;
+        --sidebar-width:   300px;
+    }
+    body.light-mode {
+        --primary-dark:   #f0f2f5;
+        --secondary-dark: #ffffff;
+        --text-light:     #1a1a1a;
+        --text-muted:     #555555;
+        --card-bg:        #ffffff;
+        --border-subtle:  rgba(0,0,0,0.08);
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scrollbar-width:none; -ms-overflow-style:none; scroll-behavior:smooth; }
+    html::-webkit-scrollbar { display:none; }
+    body {
+        font-family: 'Cairo', sans-serif;
+        background: var(--primary-dark);
+        color: var(--text-light);
+        overflow-x: hidden;
+        transition: background 0.3s, color 0.3s;
+    }
+
+    input, select, textarea {
+        font-size:16px !important;
+    }
+    .back-details-btn{
+        position:absolute;
+        top:14px;
+        right:14px;
+        z-index:11;
+    }
+
+    /* ============================================================
+       TYPOGRAPHY HELPERS
+    ============================================================ */
+    .logo-text {
+        margin-left:auto;
+        text-align:right;
+        font-size: clamp(1.2rem, 3.5vw, 1.6rem);
+        font-weight: 900;
+        color: var(--text-light) !important;
+        text-decoration: none !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        white-space: nowrap;
+        line-height: 1;
+    }
+    body.light-mode .logo-text { color: #1a1a1a !important; }
+
+    .hero-text-logo {
+        display: block;
+        font-size: clamp(1.8rem, 6vw, 3.5rem);
+        font-weight: 900;
+        color: #fff !important;
+        text-transform: uppercase;
+        letter-spacing: clamp(1px, 0.5vw, 3px);
+        margin-bottom: 12px;
+        white-space: nowrap;
+        line-height: 1;
+    }
+    .footer-text-logo {
+        display: block;
+        font-size: clamp(1.4rem, 4vw, 2rem);
+        font-weight: 900;
+        color: var(--text-light);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 20px;
+        white-space: nowrap;
+        line-height: 1;
+    }
+
+    /* ============================================================
+       LAYOUT
+    ============================================================ */
+    .container { width: 90%; max-width: 1200px; margin: 0 auto; padding: 80px 0; }
+
+    /* ============================================================
+       SECTION TITLES
+    ============================================================ */
+    .section-title {
+        text-align: right;
+        margin-bottom: 50px;
+        position: relative;
+        padding-right: 20px;
+    }
+    .section-title::before {
+        content: '';
+        position: absolute;
+        right: 0; top: 10%;
+        width: 5px; height: 80%;
+        background: var(--accent);
+        border-radius: 4px;
+        box-shadow: 0 0 10px rgba(184,144,71,0.4);
+    }
+    .section-title h2 {
+        font-size: clamp(1.6rem, 4vw, 2.5rem);
+        font-weight: 700;
+        margin-bottom: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .section-title h2 span { color: var(--accent); }
+    .section-title p { color: var(--text-muted); font-size: 0.9rem; }
+
+    /* ============================================================
+       BUTTONS
+    ============================================================ */
+    .btn-main {
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        color: #fff;
+        padding: 12px 28px;
+        border-radius: 30px;
+        text-decoration: none;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: var(--transition);
+        border: none;
+        cursor: pointer;
+        font-family: 'Cairo', sans-serif;
+        font-size: 0.95rem;
+        white-space: nowrap;
+    }
+    .btn-main:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(184,144,71,0.4); }
+
+    .btn-outline {
+        border: 1px solid var(--accent);
+        color: var(--text-light);
+        padding: 8px 16px;
+        border-radius: 20px;
+        text-decoration: none;
+        font-size: 0.88rem;
+        font-weight: 600;
+        font-family: 'Cairo', sans-serif;
+        transition: var(--transition);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        cursor: pointer;
+        background: none;
+    }
+    .btn-outline:hover, .btn-outline:focus { background: var(--accent); color: #fff; }
+    body.light-mode .btn-outline { color: var(--accent); }
+
+    /* ============================================================
+       HEADER — FIXED, NO SHIFT
+    ============================================================ */
+    header {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%;
+        z-index: 900;
+        background: rgba(10,10,12,0.96);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border-subtle);
+        transition: box-shadow 0.3s;
+    }
+    body.light-mode header {
+        background: rgba(255,255,255,0.96);
+        border-bottom-color: rgba(0,0,0,0.1);
+    }
+    header.scrolled { box-shadow: 0 4px 20px rgba(0,0,0,0.35); }
+
+    .nav-container {
+        direction:ltr;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 5%;
+        gap: 10px;
+    }
+
+    /* Desktop nav hidden entirely — hamburger always shown */
+    .nav-links { display: none !important; }
+
+    /* ============================================================
+       HAMBURGER BUTTON
+    ============================================================ */
+    .menu-btn {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        background: none;
+        border: none;
+        padding: 6px;
+        border-radius: 8px;
+        flex-shrink: 0;
+        transition: background 0.2s;
+    }
+    .menu-btn:hover { background: rgba(184,144,71,0.12); }
+    .menu-btn span {
+        display: block;
+        width: 22px;
+        height: 2.5px;
+        background: var(--text-light);
+        border-radius: 4px;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        transform-origin: center;
+    }
+    body.light-mode .menu-btn span { background: #1a1a1a; }
+
+    /* Hamburger → X animation */
+    .menu-btn.open span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+    .menu-btn.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    .menu-btn.open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+
+    /* ============================================================
+       SIDEBAR — slides from LEFT
+    ============================================================ */
+    .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+        backdrop-filter: blur(2px);
+    }
+    .sidebar-overlay.active { opacity: 1; visibility: visible; }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -320px;         /* hidden off-screen LEFT */
+        width: var(--sidebar-width);
+        height: 100%;
+        background: var(--secondary-dark);
+        z-index: 1100;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 4px 0 40px rgba(0,0,0,0.5);
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    body.light-mode .sidebar { background: #fff; box-shadow: 4px 0 40px rgba(0,0,0,0.12); }
+    .sidebar.active { left: 0; }          /* slide in from LEFT */
+
+    .sidebar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 22px;
+        border-bottom: 1px solid var(--border-subtle);
+        background: var(--primary-dark);
+        flex-shrink: 0;
+    }
+    body.light-mode .sidebar-header { background: #f5f5f5; }
+    .sidebar-header h3 { font-size: 1rem; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+
+    .sidebar-close {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 1.5rem;
+        cursor: pointer;
+        line-height: 1;
+        padding: 4px;
+        border-radius: 6px;
+        transition: color 0.2s, background 0.2s;
+    }
+    .sidebar-close:hover { color: var(--accent); background: rgba(184,144,71,0.1); }
+
+    .sidebar nav {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 18px 14px;
+        flex: 1;
+    }
+    .sidebar nav a {
+        color: var(--text-light);
+        text-decoration: none;
+        font-size: 0.97rem;
+        font-weight: 600;
+        padding: 11px 14px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: background 0.2s, color 0.2s;
+        border: 1px solid var(--border-subtle);
+        margin-bottom: 4px;
+    }
+    body.light-mode .sidebar nav a { color: #1a1a1a; }
+    .sidebar nav a:hover, .sidebar nav a:focus { background: rgba(184,144,71,0.15); color: var(--accent); border-color: rgba(184,144,71,0.25); }
+    .sidebar nav a i { width: 20px; text-align: center; color: var(--accent); font-size: 0.9rem; }
+
+    .sidebar-theme {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0 14px 18px;
+        padding: 11px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        color: var(--text-light);
+        font-weight: 600;
+        font-size: 0.97rem;
+        font-family: 'Cairo', sans-serif;
+        border: 1px solid var(--border-subtle);
+        background: none;
+        transition: background 0.2s, color 0.2s;
+        width: calc(100% - 28px);
+    }
+    body.light-mode .sidebar-theme { color: #1a1a1a; }
+    .sidebar-theme:hover { background: rgba(184,144,71,0.15); color: var(--accent); }
+    .sidebar-theme i { width: 20px; text-align: center; color: var(--accent); }
+
+    /* ============================================================
+       HERO
+    ============================================================ */
+    .hero { height: 100svh; min-height: 500px; background: linear-gradient(rgba(10,10,12,0.78), rgba(10,10,12,0.90)), url('https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=1920') no-repeat center center; background-size: cover; display:flex; align-items:center; justify-content:center; text-align:center; padding:80px 20px 40px; overflow:hidden; } @media (max-width:768px){ .hero{ background-size:110%; background-position:center center; } }overflow: hidden;
+    }
+    .hero-inner { max-width: 700px; width: 100%; }
+
+    .hero h1 {
+        padding-bottom:10px;
+        margin-top:8px;
+        font-size: clamp(1.5rem, 5vw, 3rem);
+        font-weight: 900;
+        color: #fff;
+        margin-bottom: 18px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.45;
+        margin-bottom:22px;
+    }
+
+    /* 
+       بديل النبضة — فاصل نظيف بخطين رفيعين على الجانبين
+       لا يكسر السطر، ولا يسبب تزاحماً
+    */
+    .hero-tagline {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        font-size: clamp(0.78rem, 2.2vw, 1rem);
+        color: var(--text-muted);
+        margin-bottom: 0;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+    }
+    .hero-tagline-line {
+        flex: 1;
+        max-width: 60px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--accent));
+        border: none;
+    }
+    .hero-tagline-line.right {
+        background: linear-gradient(270deg, transparent, var(--accent));
+    }
+    .hero-tagline span {
+        font-size: clamp(0.75rem, 2vw, 0.95rem);
+        color: var(--text-muted);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    /* ============================================================
+       CAR GRID & CARDS
+    ============================================================ */
+    .secondary-section { background: var(--secondary-dark); padding: 80px 0; }
+
+    .car-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 28px;
+    }
+
+    .car-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        overflow: hidden;
+        position: relative;
+        border: 1px solid var(--border-subtle);
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .car-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.3); }
+    body.light-mode .car-card { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+    body.light-mode .car-card:hover { box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
+
+    /* Image slider inside card */
+    .slider-container {
+        position: relative;
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        height: 220px;
+    }
+    .slider-container::-webkit-scrollbar { display: none; }
+    .slider-container img {
+        flex: 0 0 100%;
+        scroll-snap-align: start;
+        object-fit: cover;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        user-select: none;
+    }
+
+    /* Badges */
+    .badge-sold {
+        position: absolute;
+        top: 12px; left: 12px;
+        background: #c0392b;
+        color: #fff;
+        padding: 4px 10px;
+        font-size: 0.78rem;
+        border-radius: 6px;
+        font-weight: 700;
+        z-index: 3;
+    }
+    .badge-certified { display: none !important; } /* hidden per original */
+    .car-tag {
+        position: absolute;
+        top: 12px; right: 12px;
+        background: var(--accent);
+        padding: 4px 14px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        border-radius: 20px;
+        z-index: 3;
+        color: #fff;
+    }
+
+    .car-info { padding: 18px 20px; }
+    .car-info h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; color: var(--text-light); }
+    .car-specs {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border-subtle);
+        padding-bottom: 10px;
+        margin-bottom: 14px;
+        font-size: 0.83rem;
+        color: var(--text-muted);
+        gap: 6px;
+    }
+    .car-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .price-value { font-size: 1.2rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
+
+    /* ============================================================
+       CAR DETAILS MODAL — FULL FEATURED
+    ============================================================ */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.88);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 5000;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.35s ease, visibility 0.35s ease;
+        padding: 16px;
+    }
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+
+    .modal-content {
+        background: var(--card-bg);
+        width: 100%;
+        max-width: 780px;
+        border-radius: 20px;
+        border: 1px solid var(--border-subtle);
+        position: relative;
+        transform: translateY(-24px) scale(0.98);
+        transition: transform 0.35s ease;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+        max-height: 92vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
+    }
+    .modal-content::-webkit-scrollbar { display: none; }
+    body.light-mode .modal-content { background: #fff; border-color: #e0e0e0; }
+    .modal-overlay.active .modal-content { transform: translateY(0) scale(1); }
+
+    /* Car details modal inner layout */
+    .modal-inner { padding: 24px; text-align: right; }
+
+    .close-modal {
+        position: absolute;
+        top: 14px; left: 14px;   /* left for RTL convenience */
+        background: rgba(255,255,255,0.08);
+        border: none;
+        color: var(--text-muted);
+        font-size: 1.4rem;
+        cursor: pointer;
+        transition: 0.25s;
+        z-index: 10;
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .close-modal:hover { color: #fff; background: var(--accent); }
+    body.light-mode .close-modal { background: rgba(0,0,0,0.07); color: #555; }
+    body.light-mode .close-modal:hover { background: var(--accent); color: #fff; }
+
+    /* Modal image gallery */
+    .modal-gallery {
+        position: relative;
+        border-radius: 14px;
+        overflow: hidden;
+        height: 300px;
+        background: #000;
+        margin-bottom: 20px;
+    }
+    @media (max-width: 480px) { .modal-gallery { height: 210px; } }
+
+    #modalMainImage {
+        width: 100%; height: 100%;
+        object-fit: cover;
+        transition: opacity 0.25s ease;
+        display: block;
+    }
+
+    .gallery-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0,0,0,0.6);
+        border: none;
+        color: #fff;
+        width: 38px; height: 38px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.9rem;
+        transition: background 0.2s;
+        z-index: 2;
+        backdrop-filter: blur(4px);
+    }
+    .gallery-btn:hover { background: var(--accent); }
+    .gallery-btn.prev { left: 12px; }
+    .gallery-btn.next { right: 12px; }
+
+    /* Image counter dots */
+    .gallery-dots {
+        position: absolute;
+        bottom: 10px;
+        left: 50%; transform: translateX(-50%);
+        display: flex; gap: 6px;
+        z-index: 2;
+    }
+    .gallery-dot {
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.45);
+        cursor: pointer;
+        transition: background 0.2s, transform 0.2s;
+        border: none;
+        padding: 0;
+    }
+    .gallery-dot.active { background: var(--accent); transform: scale(1.25); }
+
+    /* Modal car info */
+    .modal-car-title { font-size: clamp(1.2rem, 3.5vw, 1.7rem); font-weight: 900; color: var(--text-light); margin-bottom: 4px; line-height: 1.2; }
+    body.light-mode .modal-car-title { color: #1a1a1a; }
+    .modal-car-price { font-size: 1.35rem; font-weight: 700; color: var(--accent); margin-bottom: 20px; }
+
+    .modal-section { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--border-subtle); }
+    .modal-section:last-of-type { border-bottom: none; }
+    .modal-section-title {
+        color: var(--accent);
+        font-size: 0.97rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+        display: flex; align-items: center; gap: 8px;
+    }
+
+    /* Specs grid */
+    .specs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 10px;
+    }
+    .spec-item {
+        background: var(--secondary-dark);
+        padding: 10px 8px;
+        border-radius: 10px;
+        border: 1px solid var(--border-subtle);
+        text-align: center;
+        transition: transform 0.2s;
+    }
+    .spec-item:hover { transform: translateY(-2px); }
+    body.light-mode .spec-item { background: #f4f5f8; border-color: #ddd; }
+    .spec-label { font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 3px; }
+    .spec-value { font-size: 0.88rem; font-weight: 700; color: var(--text-light); }
+    body.light-mode .spec-value { color: #1a1a1a; }
+
+    .features-text { color: var(--text-muted); font-size: 0.9rem; line-height: 1.7; }
+
+    /* Quick action tabs row */
+    .modal-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+    .action-tab {
+        flex: 1;
+        min-width: 120px;
+        padding: 11px 8px;
+        border-radius: 10px;
+        border: 1px solid var(--border-subtle);
+        background: var(--secondary-dark);
+        color: var(--text-muted);
+        font-family: 'Cairo', sans-serif;
+        font-size: 0.83rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+        text-align: center;
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .action-tab:hover, .action-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    body.light-mode .action-tab { background: #f4f5f8; }
+
+    /* Mini calculator inside modal */
+    #miniCalcBox { display: none; padding: 16px; background: var(--secondary-dark); border-radius: 12px; border: 1px solid var(--border-subtle); margin-top: 4px; }
+    #miniCalcBox.show { display: block; }
+    body.light-mode #miniCalcBox { background: #f4f5f8; }
+    .mini-calc-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .mini-calc-row label { font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px; }
+    .mini-calc-row input, .mini-calc-row select {
+        width: 100%;
+        padding: 9px 12px;
+        background: var(--primary-dark);
+        border: 1px solid var(--border-subtle);
+        color: var(--text-light);
+        border-radius: 8px;
+        outline: none;
+        font-family: 'Cairo', sans-serif;
+        font-size: 0.85rem;
+    }
+    body.light-mode .mini-calc-row input, body.light-mode .mini-calc-row select { background: #fff; border-color: #ccc; color: #1a1a1a; }
+    .mini-calc-row > div { flex: 1; min-width: 120px; }
+    .mini-calc-result { text-align: center; color: var(--accent); font-size: 1.4rem; font-weight: 900; padding: 8px 0 4px; }
+    .mini-calc-note { text-align: center; font-size: 0.72rem; color: var(--text-muted); }
+
+    /* Contact buttons row */
+    .modal-contact-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .modal-contact-row a {
+        flex: 1;
+        min-width: 140px;
+        justify-content: center;
+    }
+
+    /* ============================================================
+       CONTACT MODAL
+    ============================================================ */
+    .contact-modal-content {
+        background: var(--card-bg);
+        width: 90%;
+        max-width: 480px;
+        padding: 36px 28px;
+        border-radius: 20px;
+        border: 1px solid var(--border-subtle);
+        position: relative;
+        transform: translateY(-24px) scale(0.98);
+        transition: transform 0.35s ease;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+        max-height: 92vh;
+        overflow-y: auto;
+        text-align: center;
+    }
+    body.light-mode .contact-modal-content { background: #fff; border-color: #ddd; }
+    .modal-overlay.active .contact-modal-content { transform: translateY(0) scale(1); }
+
+    .modal-header h2 { color: var(--text-light); font-size: 1.7rem; margin-bottom: 8px; }
+    body.light-mode .modal-header h2 { color: #1a1a1a; }
+    .modal-header p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 22px; line-height: 1.6; }
+
+    #complaintForm { display: flex; flex-direction: column; gap: 13px; }
+    .form-group input, .form-group select, .form-group textarea {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--border-subtle);
+        border-radius: 10px;
+        font-size: 15px;
+        background: var(--primary-dark);
+        color: var(--text-light);
+        direction: rtl;
+        outline: none;
+        transition: border 0.25s;
+        font-family: 'Cairo', sans-serif;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+    body.light-mode .form-group input, body.light-mode .form-group select, body.light-mode .form-group textarea { background: #f9f9f9; color: #1a1a1a; border-color: #ccc; }
+    .submit-btn {
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        color: #fff;
+        padding: 13px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 15px;
+        font-family: 'Cairo', sans-serif;
+        transition: var(--transition);
+        width: 100%;
+        margin-top: 6px;
+    }
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(184,144,71,0.4); }
+
+    /* ============================================================
+       INSTALLMENT CALCULATOR SECTION
+    ============================================================ */
+    .calc-wrapper {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 36px;
+        background: var(--card-bg);
+        padding: 36px;
+        border-radius: 20px;
+        border: 1px solid var(--border-subtle);
+    }
+    @media (max-width: 640px) { .calc-wrapper { grid-template-columns: 1fr; gap: 20px; padding: 22px; } }
+    .calc-result-box {
+        text-align: center;
+        border: 2px dashed var(--accent);
+        padding: 36px 20px;
+        border-radius: 14px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .calc-result-box h3 { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px; }
+    #calcResult { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 900; color: var(--accent); margin: 12px 0; line-height: 1.45;
+        margin-bottom:22px; }
+    .calc-form .form-group { margin-bottom: 16px; }
+    .calc-form label { display: block; margin-bottom: 6px; font-size: 0.87rem; color: var(--text-muted); }
+    .calc-form input, .calc-form select {
+        width: 100%;
+        padding: 11px 14px;
+        background: var(--primary-dark);
+        border: 1px solid var(--border-subtle);
+        color: var(--text-light);
+        border-radius: 8px;
+        outline: none;
+        font-family: 'Cairo', sans-serif;
+        font-size: 0.9rem;
+    }
+    body.light-mode .calc-form input, body.light-mode .calc-form select { background: #f9f9f9; color: #1a1a1a; border-color: #ccc; }
+    @media (max-width: 768px) { .calc-form input, .calc-form select { font-size: 16px; } }
+
+    /* ============================================================
+       TRADE-IN FORM
+    ============================================================ */
+    .trade-form {
+        max-width: 600px;
+        margin: 0 auto;
+        background: var(--card-bg);
+        padding: 28px;
+        border-radius: 16px;
+        border: 1px solid var(--border-subtle);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .trade-form label { display: block; margin-bottom: 6px; font-size: 0.87rem; color: var(--text-muted); }
+    .trade-form input, .trade-form textarea {
+        width: 100%;
+        padding: 11px 14px;
+        background: var(--primary-dark);
+        border: 1px solid var(--border-subtle);
+        color: var(--text-light);
+        border-radius: 8px;
+        outline: none;
+        font-family: 'Cairo', sans-serif;
+        font-size: 0.9rem;
+        transition: border 0.25s;
+        resize: vertical;
+    }
+    .trade-form input:focus, .trade-form textarea:focus { border-color: var(--accent); }
+    body.light-mode .trade-form input, body.light-mode .trade-form textarea { background: #f9f9f9; color: #1a1a1a; border-color: #ccc; }
+    @media (max-width: 768px) { .trade-form input, .trade-form textarea { font-size: 16px; } }
+
+    /* ============================================================
+       REVIEW / SERVICE CARDS
+    ============================================================ */
+    .review-card {
+        background: var(--card-bg);
+        padding: 22px;
+        border-radius: 14px;
+        border: 1px solid var(--border-subtle);
+    }
+    body.light-mode .review-card { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .review-stars { color: #ffc107; margin-bottom: 10px; font-size: 0.9rem; }
+
+    /* ============================================================
+       FLOATING CONTACT BUTTON
+    ============================================================ */
+    .float-contact {
+        position: fixed;
+        bottom: 24px;
+        left: 24px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        color: #fff;
+        width: 56px; height: 56px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.6rem;
+        box-shadow: 0 6px 20px rgba(184,144,71,0.45);
+        z-index: 800;
+        cursor: pointer;
+        border: none;
+        transition: transform 0.25s, box-shadow 0.25s;
+    }
+    .float-contact:hover { transform: scale(1.1); box-shadow: 0 8px 28px rgba(184,144,71,0.6); }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer { background: var(--primary-dark); padding: 44px 0 24px; text-align: center; border-top: 1px solid var(--border-subtle); }
+    .footer-links { display: flex; justify-content: center; align-items: center; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+
+    /* ============================================================
+       RESPONSIVE FIXES
+    ============================================================ */
+    @media (max-width: 768px) {
+        .container { padding: 56px 0; }
+        .car-grid { grid-template-columns: 1fr; }
+        .hero-text-logo { font-size: clamp(1.5rem, 8vw, 2.8rem); }
+        .hero h1 { font-size: clamp(1.2rem, 5vw, 2rem); }
+        .section-title h2 { font-size: clamp(1.3rem, 5vw, 2rem); }
+        .specs-grid { grid-template-columns: repeat(2, 1fr); }
+        .modal-inner { padding: 16px; }
+        .modal-gallery { margin-top: 10px; }
+    }
+
+    /* Prevent body scroll when modal open */
+    body.modal-open { overflow: hidden; }
+
+    /* light mode header */
+    body.light-mode header { background: rgba(255,255,255,0.96); }
+
+    /* Tips section — reuse car-card style */
+    .tip-tag {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 5px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
+    /* Scrollbar inside modal */
+    .modal-content::-webkit-scrollbar,
+    .contact-modal-content::-webkit-scrollbar { display: none; }
+
+    /* ============================================================
+       LIGHT MODE — CARD / TEXT ADJUSTMENTS
+    ============================================================ */
+    body.light-mode .car-info h3 { color: #1a1a1a; }
+    body.light-mode .modal-car-title { color: #1a1a1a; }
+    body.light-mode .spec-item { background: #f0f2f5; border-color: #ddd; }
+    body.light-mode .spec-value { color: #1a1a1a; }
+    body.light-mode footer { border-top-color: #e0e0e0; }
+    body.light-mode .review-card { background: #fff; }
+    body.light-mode .footer-text-logo { color: #1a1a1a; }
+    body.light-mode .action-tab { background: #f4f5f8; color: #555; border-color: #ddd; }
+    body.light-mode .action-tab:hover, body.light-mode .action-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    </style>
+</head>
+<body>
+
+    <!-- ======================================================
+         SIDEBAR OVERLAY (closes sidebar on outside click)
+    ====================================================== -->
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+    <!-- ======================================================
+         SIDEBAR MENU — slides from LEFT
+    ====================================================== -->
+    <aside class="sidebar" id="sideMenu" role="dialog" aria-label="القائمة الرئيسية">
+        <div class="sidebar-header">
+            <h3>القائمة</h3>
+            <button class="sidebar-close" id="sidebarCloseBtn" aria-label="إغلاق القائمة">&times;</button>
+        </div>
+        <nav>
+            <a href="#inventory"  data-close-sidebar><i class="fas fa-car"></i> السيارات</a>
+            <a href="#calculator" data-close-sidebar><i class="fas fa-calculator"></i> التقسيط</a>
+            <a href="#trade-in"   data-close-sidebar><i class="fas fa-exchange-alt"></i> استبدال</a>
+            <a href="#services"   data-close-sidebar><i class="fas fa-tools"></i> خدماتنا</a>
+            <a href="#tips"       data-close-sidebar><i class="fas fa-lightbulb"></i> نصائح</a>
+            <a href="#contact"    data-close-sidebar><i class="fas fa-phone-alt"></i> تواصل معنا</a>
+        </nav>
+        <button class="sidebar-theme" id="sidebarThemeBtn" aria-label="تغيير الوضع">
+            <i class="fas fa-moon"></i> تغيير الوضع
+        </button>
+    </aside>
+
+    <!-- ======================================================
+         HEADER
+    ====================================================== -->
+    <header id="main-header">
+        <div class="nav-container">
+            <!-- Hamburger — 3 bars -->
+            <button class="menu-btn" id="menuBtn" aria-label="فتح القائمة" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <!-- Logo -->
+            <a href="#" class="logo-text">
+                <span style="font-weight:500;">AUTO CAR </span>AZAM
+            </a>
+
+            <!-- Theme toggle (header hidden after move) -->
+            <button class="menu-btn" id="headerThemeBtn" style="display:none !important;" aria-label="تغيير الوضع" style="gap:0; justify-content:center; align-items:center;">
+                <i class="fas fa-moon" style="font-size:1.1rem; color:var(--text-light);"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- ======================================================
+         HERO
+    ====================================================== -->
+    <section class="hero">
+        <div class="hero-inner">
+            <span class="hero-text-logo">
+                <span style="font-weight:500;">AUTO CAR </span>AZAM
+            </span>
+
+            <h1>الوجهة الأولى للسيارات</h1>
+
+            <!-- Clean tagline — two thin lines instead of pulsing dot -->
+            <div class="hero-tagline">
+                <hr class="hero-tagline-line">
+                <span>سيارات زيرو · كسر زيرو · مستعمل معتمدة ومفحوصة</span>
+                <hr class="hero-tagline-line right">
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================================================
+         INVENTORY
+    ====================================================== -->
+    <section id="inventory" class="container">
+        <div class="section-title">
+            <h2>السيارات <span>المتاحة حالياً</span></h2>
+            <p>اسحب صورة السيارة لليمين واليسار لرؤية المزيد</p>
+        </div>
+
+        <!--
+            DATA ATTRIBUTES on each .car-card allow easy addition of new cars.
+            To add a car: copy a .car-card block and update data-* attributes + HTML.
+        -->
+        <div class="car-grid" id="carGridMain">
+
+            <!-- ====== CARD: Mercedes ====== -->
+            <div class="car-card"
+                data-car-key="mercedes"
+                data-title="مرسيدس بنز C200 AMG"
+                data-price="4,500,000 ج"
+                data-model="2024"
+                data-km="12,000 كم"
+                data-status="كسر زيرو"
+                data-engine="1500 CC تربو"
+                data-gear="أوتوماتيك"
+                data-color="أسود ملوكي"
+                data-fuel="بنزين"
+                data-features="باكدج AMG رياضي بالكامل، فتحة سقف بانوراما، نظام صوتي Burmester، شاشة رقمية ممتدة، كراسي جلد كهربائية بذاكرة، Ambient Lighting 64 لوناً، حساسات 360 درجة."
+                data-images="https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&q=80&w=600|https://images.unsplash.com/photo-1553440569-bcc63803a83d?auto=format&fit=crop&q=80&w=600"
+                data-wa="https://wa.me/201019284211?text=أهلاً%20أوتو%20كار%20عزام،%20أنا%20مهتم%20بسيارة%20مرسيدس%20C200%20AMG%20المعروضة."
+                data-sold="false">
+
+                <div class="slider-container">
+                    <span class="car-tag">كسر زيرو</span>
+                    <img loading="lazy" src="https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&q=80&w=600" alt="مرسيدس بنز C200 AMG">
+                    <img loading="lazy" src="https://images.unsplash.com/photo-1553440569-bcc63803a83d?auto=format&fit=crop&q=80&w=600" alt="مرسيدس بنز C200 AMG داخلي">
+                </div>
+                <div class="car-info">
+                    <h3>مرسيدس بنز C200 AMG</h3>
+                    <div class="car-specs">
+                        <span><i class="fas fa-calendar-alt" style="color:var(--accent); margin-left:4px;"></i>2024</span>
+                        <span><i class="fas fa-tachometer-alt" style="color:var(--accent); margin-left:4px;"></i>12,000 كم</span>
+                    </div>
+                    <div class="car-footer">
+                        <span class="price-value">4,500,000 ج</span>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn-outline btn-details" style="background:var(--accent); color:#fff; border-color:var(--accent);">
+                                <i class="fas fa-info-circle"></i> التفاصيل
+                            </button>
+                            <a href="https://wa.me/201019284211?text=أهلاً،%20مهتم%20بمرسيدس%20C200" class="btn-outline" target="_blank" rel="noopener">
+                                <i class="fab fa-whatsapp"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ====== END CARD: Mercedes ====== -->
+
+            <!-- ====== CARD: BMW (SOLD) ====== -->
+            <div class="car-card"
+                style="opacity:0.75;"
+                data-car-key="bmw"
+                data-title="بي إم دبليو 520i"
+                data-price="3,800,000 ج (مباع)"
+                data-model="2022"
+                data-km="45,000 كم"
+                data-status="مستعمل معتمد"
+                data-engine="2000 CC تربو"
+                data-gear="أوتوماتيك"
+                data-color="رمادي"
+                data-fuel="بنزين"
+                data-features="عداد ديجيتال، فتحة سقف، صالون جلد بيج، شاشة Apple CarPlay & Android Auto، إضاءة LED، مثبت سرعة، دخول بدون مفتاح."
+                data-images="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=600"
+                data-wa="https://wa.me/201019284211?text=هل%20يوجد%20سيارات%20مشابهة%20لـBMW%20520i؟"
+                data-sold="true">
+
+                <div class="slider-container">
+                    <span class="badge-sold">SOLD OUT</span>
+                    <img loading="lazy" src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=600" alt="بي إم دبليو 520i">
+                </div>
+                <div class="car-info">
+                    <h3>بي إم دبليو 520i</h3>
+                    <div class="car-specs">
+                        <span><i class="fas fa-calendar-alt" style="color:var(--text-muted); margin-left:4px;"></i>2022</span>
+                        <span><i class="fas fa-tachometer-alt" style="color:var(--text-muted); margin-left:4px;"></i>45,000 كم</span>
+                    </div>
+                    <div class="car-footer">
+                        <span class="price-value" style="color:#888;">3,800,000 ج</span>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn-outline btn-details" style="background:var(--accent); color:#fff; border-color:var(--accent);">
+                                <i class="fas fa-info-circle"></i> التفاصيل
+                            </button>
+                            <span class="btn-outline" style="border-color:#888; color:#888; cursor:not-allowed;">مباع</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ====== END CARD: BMW ====== -->
+
+        </div>
+    </section>
+
+    <!-- ======================================================
+         CAR DETAILS MODAL
+    ====================================================== -->
+    <div class="modal-overlay" id="carDetailsModal" role="dialog" aria-modal="true" aria-label="تفاصيل السيارة">
+        <div class="modal-content">
+            <button class="close-modal" id="closeCarModal" aria-label="إغلاق">&times;</button>
+            <button class="btn-outline back-details-btn" id="detailsBackBtn"><i class="fas fa-arrow-right"></i> رجوع</button>
+
+            <div class="modal-inner">
+                <!-- Gallery -->
+                <div class="modal-gallery" id="modalGallery">
+                    <img id="modalMainImage" src="" alt="صورة السيارة">
+                    <button class="gallery-btn prev" id="galleryPrev" aria-label="السابق"><i class="fas fa-chevron-left"></i></button>
+                    <button class="gallery-btn next" id="galleryNext" aria-label="التالي"><i class="fas fa-chevron-right"></i></button>
+                    <div class="gallery-dots" id="galleryDots"></div>
+                </div>
+
+                <!-- Title & Price -->
+                <h2 class="modal-car-title" id="modalCarTitle">اسم السيارة</h2>
+                <div class="modal-car-price" id="modalCarPrice">0 ج.م</div>
+
+                <!-- Quick action tabs -->
+                <div class="modal-actions">
+                    <button class="action-tab" data-tab="specs">
+                        <i class="fas fa-sliders-h"></i> المواصفات
+                    </button>
+                    <button class="action-tab" data-tab="features">
+                        <i class="fas fa-gem"></i> الكماليات
+                    </button>
+                    <button class="action-tab" data-tab="calc">
+                        <i class="fas fa-calculator"></i> التقسيط
+                    </button>
+                </div>
+
+                <!-- Specs panel -->
+                <div class="modal-section" id="tabSpecs">
+                    <div class="modal-section-title">
+                        <i class="fas fa-sliders-h"></i> المواصفات الفنية
+                    </div>
+                    <div class="specs-grid" id="modalSpecsGrid"></div>
+                </div>
+
+                <!-- Features panel -->
+                <div class="modal-section" id="tabFeatures" style="display:none;">
+                    <div class="modal-section-title">
+                        <i class="fas fa-gem"></i> الكماليات والرفاهية
+                    </div>
+                    <p class="features-text" id="modalCarFeatures"></p>
+                </div>
+
+                <!-- Mini calc panel -->
+                <div class="modal-section" id="tabCalc" style="display:none;">
+                    <div class="modal-section-title">
+                        <i class="fas fa-calculator"></i> حاسبة التقسيط السريعة
+                    </div>
+                    <div id="miniCalcBox" class="show">
+                        <div class="mini-calc-row">
+                            <div>
+                                <label>المقدم (ج.م)</label>
+                                <input type="number" id="miniDownPayment" placeholder="مثال: 1000000" oninput="calcMini()">
+                            </div>
+                            <div>
+                                <label>المدة</label>
+                                <select id="miniYears" onchange="calcMini()">
+                                    <option value="1">سنة</option>
+                                    <option value="2">سنتين</option>
+                                    <option value="3" selected>3 سنوات</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mini-calc-result" id="miniCalcResult">— ج.م / شهر</div>
+                        <div class="mini-calc-note">* تقريبي · يختلف حسب البنك</div>
+                    </div>
+                </div>
+
+                <!-- Contact buttons -->
+                <div class="modal-contact-row">
+                    <a id="modalWaBtn" href="#" target="_blank" rel="noopener" class="btn-main" style="background:#25d366; justify-content:center;">
+                        <i class="fab fa-whatsapp"></i> واتساب
+                    </a>
+                    <a href="tel:+201019284211" class="btn-main" style="background:var(--accent); justify-content:center;">
+                        <i class="fas fa-phone-alt"></i> اتصال
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================
+         INSTALLMENT CALCULATOR
+    ====================================================== -->
+    <section id="calculator" class="secondary-section">
+        <div class="container">
+            <div class="section-title">
+                <h2>حاسبة <span>التقسيط</span></h2>
+                <p>احسب القسط الشهري التقريبي لسيارتك بكل سهولة</p>
+            </div>
+            <div class="calc-wrapper">
+                <div class="calc-form">
+                    <div class="form-group">
+                        <label>سعر السيارة (ج.م)</label>
+                        <input type="number" id="carPrice" placeholder="مثال: 1500000" oninput="calculateLoan()">
+                    </div>
+                    <div class="form-group">
+                        <label>المقدم المدفوع (ج.م)</label>
+                        <input type="number" id="downPayment" placeholder="مثال: 500000" oninput="calculateLoan()">
+                    </div>
+                    <div class="form-group">
+                        <label>فترة السداد</label>
+                        <select id="loanYears" onchange="calculateLoan()">
+                            <option value="1">سنة واحدة</option>
+                            <option value="2">سنتين</option>
+                            <option value="3" selected>3 سنوات (الحد الأقصى)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="calc-result-box">
+                    <h3>القسط الشهري التقريبي</h3>
+                    <div id="calcResult">0 ج.م</div>
+                    <p style="font-size:0.75rem; color:var(--text-muted);">* تقريبي · يختلف حسب البنك أو شركة التمويل</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================================================
+         TRADE-IN
+    ====================================================== -->
+    <section id="trade-in" class="container">
+        <div class="section-title">
+            <h2>بيع أو <span>استبدل عربيتك</span></h2>
+            <p>ابعتلنا بيانات عربيتك وهنتواصل معاك فوراً بأفضل سعر في السوق</p>
+        </div>
+        <form class="trade-form" id="tradeForm">
+            <div class="form-group">
+                <label>ماركة ونوع السيارة *</label>
+                <input type="text" id="tradeModel" placeholder="اكتب الماركة والموديل" required>
+            </div>
+            <div class="form-group">
+                <label>الحالة والعداد</label>
+                <input type="text" id="tradeCondition" placeholder="مثال: فابريكا بالكامل، 25,000 كم" required>
+            </div>
+            <div class="form-group">
+                <label>تفاصيل إضافية أو السعر المطلوب</label>
+                <textarea id="tradeDetails" rows="4" placeholder="أي تفاصيل إضافية..."></textarea>
+            </div>
+            <button type="submit" class="btn-main" style="justify-content:center;">
+                <i class="fas fa-paper-plane"></i> إرسال عبر واتساب
+            </button>
+        </form>
+    </section>
+
+    <!-- ======================================================
+         SERVICES
+    ====================================================== -->
+    <section id="services" class="secondary-section">
+        <div class="container">
+            <div class="section-title">
+                <h2><span>خدماتنا</span> المتميزة</h2>
+                <p>نوفر لك تجربة متكاملة لراحة بالك وثقتك</p>
+            </div>
+            <div class="car-grid">
+                <div class="review-card" style="text-align:center; padding:28px;">
+                    <i class="fas fa-car-side" style="font-size:2.2rem; color:var(--accent); margin-bottom:14px; display:block;"></i>
+                    <h3 style="margin-bottom:10px;">نخبة السيارات المعتمدة</h3>
+                    <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.65;">تشكيلة حصرية من سيارات الزيرو والكسر زيرو والمستعمل، خضعت لأدق فحص فني لضمان جودتها.</p>
+                </div>
+                <div class="review-card" style="text-align:center; padding:28px;">
+                    <i class="fas fa-calculator" style="font-size:2.2rem; color:var(--accent); margin-bottom:14px; display:block;"></i>
+                    <h3 style="margin-bottom:10px;">أنظمة تقسيط مرنة</h3>
+                    <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.65;">خطط تقسيط بالتعاون مع كبرى البنوك وشركات التمويل، بالإضافة للقسط المباشر.</p>
+                </div>
+                <div class="review-card" style="text-align:center; padding:28px;">
+                    <i class="fas fa-exchange-alt" style="font-size:2.2rem; color:var(--accent); margin-bottom:14px; display:block;"></i>
+                    <h3 style="margin-bottom:10px;">استبدال السيارات</h3>
+                    <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.65;">نُثمن سيارتك الحالية بأعلى سعر في السوق لتنتقل إلى وجهتك القادمة بسلاسة.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================================================
+         TIPS
+    ====================================================== -->
+    <section id="tips" class="container">
+        <div class="section-title">
+            <h2><span>نصائح</span> قبل الشراء</h2>
+            <p>معلومات تهمك لتختار عربيتك وتصونها بالشكل الصحيح</p>
+        </div>
+        <div class="car-grid">
+            <div class="car-card" style="padding:22px;">
+                <span class="tip-tag" style="background:var(--accent); color:#fff;">نصيحة فنية</span>
+                <h4 style="margin:12px 0 8px; font-size:1rem;">أهمية الفحص الشامل</h4>
+                <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.65;">قبل شراء أي سيارة مستعملة، تأكد من فحصها في مركز معتمد للوقوف على حالة الشاسيه والموتور والدهان.</p>
+            </div>
+            <div class="car-card" style="padding:22px;">
+                <span class="tip-tag" style="background:#28a745; color:#fff;">نصيحة مالية</span>
+                <h4 style="margin:12px 0 8px; font-size:1rem;">حساب الميزانية المخفية</h4>
+                <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.65;">اترك جزءاً من ميزانيتك لمصاريف الترخيص والتأمين والصيانة الدورية الأولى.</p>
+            </div>
+            <div class="car-card" style="padding:22px;">
+                <span class="tip-tag" style="background:#ffc107; color:#000;">الحفاظ على السيارة</span>
+                <h4 style="margin:12px 0 8px; font-size:1rem;">الالتزام بمواعيد الزيوت</h4>
+                <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.65;">تغيير زيت الموتور والفتيس في مواعيده المحددة هو خط الدفاع الأول لأجزاء السيارة الميكانيكية.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================================================
+         FLOATING CONTACT BUTTON
+    ====================================================== -->
+    <button class="float-contact" id="openContactModal" aria-label="تواصل معنا">
+        <i class="fas fa-headset"></i>
+    </button>
+
+    <!-- ======================================================
+         CONTACT MODAL
+    ====================================================== -->
+    <div class="modal-overlay" id="contactModal" role="dialog" aria-modal="true" aria-label="تواصل معنا">
+        <div class="contact-modal-content">
+            <button class="close-modal" id="closeContactModal" aria-label="إغلاق">&times;</button>
+            <div class="modal-header">
+                <h2>تواصل معنا</h2>
+                <p>شاركنا شكواك أو اقتراحك وسنتواصل معك في أقرب وقت.</p>
+            </div>
+            <form id="complaintForm" action="https://formspree.io/f/xnjyqdrl" method="POST">
+                <div class="form-group">
+                    <input type="text" name="name" placeholder="اسمك الكريم (اختياري)">
+                </div>
+                <div class="form-group">
+                    <select name="type" required>
+                        <option value="" disabled selected>اختر نوع الرسالة</option>
+                        <option value="complaint">شكوى</option>
+                        <option value="suggestion">اقتراح</option>
+                        <option value="inquiry">استفسار عام</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <textarea name="message" rows="4" placeholder="اكتب تفاصيل رسالتك هنا..." required></textarea>
+                </div>
+                <button type="submit" class="submit-btn">إرسال الرسالة</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ======================================================
+         FOOTER
+    ====================================================== -->
+    <footer id="contact">
+        <div class="container" style="padding:0; padding-bottom:20px;">
+            <span class="footer-text-logo">AUTO CAR AZAM</span>
+
+            <div class="footer-links">
+                <a href="https://www.facebook.com/share/1PMJ1Kiue5/?mibextid=wwXIfr"
+                   class="btn-main" style="background:#1877F2;" target="_blank" rel="noopener">
+                    <i class="fab fa-facebook-f"></i> فيسبوك
+                </a>
+                <a href="https://wa.me/201019284211" class="btn-main"
+                   style="background:#25d366;" target="_blank" rel="noopener">
+                    <i class="fab fa-whatsapp"></i> واتساب
+                </a>
+                <a href="tel:+201019284211" class="btn-main"
+                   style="width:48px; height:48px; padding:0; justify-content:center; border-radius:50%;"
+                   aria-label="اتصال">
+                    <i class="fas fa-phone-alt" style="margin:0;"></i>
+                </a>
+            </div>
+
+            <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:8px;">
+                <i class="fas fa-map-marker-alt" style="color:var(--accent); margin-left:5px;"></i>
+                المنوفية - شبين الكوم - امتداد مزلقان العبور
+            </p>
+            <p style="font-size:0.9rem; color:var(--text-muted);">
+                جميع الحقوق محفوظة © 2026
+                <strong style="color:var(--text-light);">AUTO CAR AZAM</strong>
+            </p>
+            <p style="margin-top:28px; font-size:0.62rem; color:var(--text-muted); letter-spacing:1px;">
+                تم التصميم والتطوير بواسطة <strong>ENG ZIAD ABDALDAYEM</strong>
+            </p>
+        </div>
+    </footer>
+
+    <!-- ======================================================
+         JAVASCRIPT
+    ====================================================== -->
+    <script>
+    /* ============================================================
+       1. SIDEBAR / MENU TOGGLE
+       - Opens from LEFT with smooth animation
+       - Closes on: overlay click, close button, nav link click, Escape key
+    ============================================================ */
+    const menuBtn        = document.getElementById('menuBtn');
+    const sideMenu       = document.getElementById('sideMenu');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
+
+    function openSidebar() {
+        sideMenu.classList.add('active');
+        sidebarOverlay.classList.add('active');
+        menuBtn.classList.add('open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        document.body.classList.add('modal-open');
+    }
+    function closeSidebar() {
+        sideMenu.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+        menuBtn.classList.remove('open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('modal-open');
+    }
+    function toggleSidebar() {
+        sideMenu.classList.contains('active') ? closeSidebar() : openSidebar();
+    }
+
+    menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleSidebar(); });
+    sidebarCloseBtn.addEventListener('click', closeSidebar);
+    sidebarOverlay.addEventListener('click', closeSidebar);
+
+    // Close on any sidebar nav link click
+    document.querySelectorAll('[data-close-sidebar]').forEach(link => {
+        link.addEventListener('click', closeSidebar);
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeSidebar();
+            closeCarModal();
+            closeContactModal();
+        }
+    });
+
+    /* ============================================================
+       2. THEME TOGGLE (header button + sidebar button)
+    ============================================================ */
+    function applyTheme(isDark) {
+        if (isDark) {
+            document.body.classList.remove('light-mode');
+        } else {
+            document.body.classList.add('light-mode');
+        }
+        // Update icon in header
+        const headerIcon = document.querySelector('#headerThemeBtn i');
+        if (headerIcon) headerIcon.className = isDark ? 'fas fa-moon' : 'fas fa-sun';
+        // Update icon in sidebar
+        const sidebarIcon = document.querySelector('#sidebarThemeBtn i');
+        if (sidebarIcon) sidebarIcon.className = isDark ? 'fas fa-moon' : 'fas fa-sun';
+    }
+
+    function toggleTheme() {
+        const nowDark = document.body.classList.contains('light-mode'); // if light, switch to dark
+        applyTheme(nowDark);
+        try { localStorage.setItem('theme', nowDark ? 'dark' : 'light'); } catch(e) {}
+    }
+
+    const headerThemeBtn=document.getElementById('headerThemeBtn');
+    if(headerThemeBtn){headerThemeBtn.addEventListener('click', toggleTheme);}
+    document.getElementById('sidebarThemeBtn').addEventListener('click', toggleTheme);
+
+    // Load saved theme
+    try {
+        const saved = localStorage.getItem('theme');
+        if (saved === 'light') applyTheme(false);
+    } catch(e) {}
+
+    /* ============================================================
+       3. HEADER SCROLL SHADOW
+    ============================================================ */
+    window.addEventListener('scroll', () => {
+        document.getElementById('main-header').classList.toggle('scrolled', window.scrollY > 50);
+    }, { passive: true });
+
+    /* ============================================================
+       4. CAR DETAILS MODAL
+       Driven entirely by data-* attributes on each .car-card
+    ============================================================ */
+    let modalImages = [];
+    let modalImgIdx = 0;
+    let currentCarPrice = 0; // for mini calculator
+
+    function openCarModal(card) {
+        // Read data attributes
+        const title    = card.dataset.title    || '';
+        const price    = card.dataset.price    || '';
+        const model    = card.dataset.model    || '';
+        const km       = card.dataset.km       || '';
+        const status   = card.dataset.status   || '';
+        const engine   = card.dataset.engine   || '';
+        const gear     = card.dataset.gear     || '';
+        const color    = card.dataset.color    || '';
+        const fuel     = card.dataset.fuel     || '';
+        const features = card.dataset.features || '';
+        const waLink   = card.dataset.wa       || '#';
+        const images   = (card.dataset.images  || '').split('|').filter(Boolean);
+
+        // Populate title & price
+        document.getElementById('modalCarTitle').textContent = title;
+        document.getElementById('modalCarPrice').textContent  = price;
+
+        // Store price for mini-calc (extract numbers)
+        const priceNum = parseFloat((price || '').replace(/[^\d.]/g, ''));
+        currentCarPrice = isNaN(priceNum) ? 0 : priceNum;
+
+        // Populate specs grid
+        const specsGrid = document.getElementById('modalSpecsGrid');
+        const specs = [
+            { label: 'الموديل',       value: model   },
+            { label: 'العداد',        value: km      },
+            { label: 'الحالة',        value: status  },
+            { label: 'المحرك',        value: engine  },
+            { label: 'ناقل الحركة',   value: gear    },
+            { label: 'اللون',         value: color   },
+            { label: 'الوقود',        value: fuel    },
+        ];
+        specsGrid.innerHTML = specs.map(s =>
+            `<div class="spec-item">
+                <span class="spec-label">${s.label}</span>
+                <span class="spec-value">${s.value || '—'}</span>
+            </div>`
+        ).join('');
+
+        // Features
+        document.getElementById('modalCarFeatures').textContent = features;
+
+        // WhatsApp button
+        document.getElementById('modalWaBtn').href = waLink;
+
+        // Gallery
+        modalImages = images.length ? images : ['https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&q=80&w=600'];
+        modalImgIdx = 0;
+        updateGallery();
+
+        // Show first tab (specs) by default
+        activateTab('specs');
+
+        // Reset mini calc
+        document.getElementById('miniDownPayment').value = '';
+        document.getElementById('miniCalcResult').textContent = '— ج.م / شهر';
+
+        // Open
+        if(!history.state || !history.state.carModal){
+            history.pushState({carModal:true},'');
+        }
+        const overlay = document.getElementById('carDetailsModal');
+        overlay.classList.add('active');
+        document.body.classList.add('modal-open');
+        overlay.querySelector('.modal-content').scrollTop = 0;
+    }
+
+    function closeCarModal() {
+        document.getElementById('carDetailsModal').classList.remove('active');
+        document.body.classList.remove('modal-open');
+    }
+
+    function goBackDetails(){
+        if(history.length > 1){
+            window.history.back();
+        }else{
+            closeCarModal();
+            window.location.href='#inventory';
+        }
+    }
+
+    document.getElementById('detailsBackBtn').addEventListener('click', goBackDetails);
+
+    window.addEventListener('popstate',()=>{
+        const modal=document.getElementById('carDetailsModal');
+        if(modal.classList.contains('active')){
+            closeCarModal();
+        }
+    });
+
+    // Gallery navigation
+    function updateGallery() {
+        const img = document.getElementById('modalMainImage');
+        img.style.opacity = '0.5';
+        setTimeout(() => {
+            img.src = modalImages[modalImgIdx];
+            img.style.opacity = '1';
+        }, 150);
+
+        // Show/hide nav buttons
+        const showNav = modalImages.length > 1;
+        document.getElementById('galleryPrev').style.display = showNav ? 'flex' : 'none';
+        document.getElementById('galleryNext').style.display = showNav ? 'flex' : 'none';
+
+        // Dots
+        const dotsContainer = document.getElementById('galleryDots');
+        dotsContainer.innerHTML = '';
+        if (showNav) {
+            modalImages.forEach((_, i) => {
+                const dot = document.createElement('button');
+                dot.className = 'gallery-dot' + (i === modalImgIdx ? ' active' : '');
+                dot.setAttribute('aria-label', `صورة ${i + 1}`);
+                dot.addEventListener('click', () => { modalImgIdx = i; updateGallery(); });
+                dotsContainer.appendChild(dot);
+            });
+        }
+    }
+
+    document.getElementById('galleryPrev').addEventListener('click', () => {
+        modalImgIdx = (modalImgIdx === 0) ? modalImages.length - 1 : modalImgIdx - 1;
+        updateGallery();
+    });
+    document.getElementById('galleryNext').addEventListener('click', () => {
+        modalImgIdx = (modalImgIdx === modalImages.length - 1) ? 0 : modalImgIdx + 1;
+        updateGallery();
+    });
+
+    // Tabs inside modal
+    function activateTab(tabName) {
+        const panels = { specs: 'tabSpecs', features: 'tabFeatures', calc: 'tabCalc' };
+        Object.entries(panels).forEach(([key, id]) => {
+            document.getElementById(id).style.display = (key === tabName) ? 'block' : 'none';
+        });
+        document.querySelectorAll('.action-tab').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabName);
+        });
+    }
+
+    document.querySelectorAll('.action-tab').forEach(btn => {
+        btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+    });
+
+    // Close modal events
+    document.getElementById('closeCarModal').addEventListener('click', closeCarModal);
+    document.getElementById('carDetailsModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeCarModal();
+    });
+
+    // Attach "التفاصيل" buttons — using event delegation on car grid
+    document.getElementById('carGridMain').addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-details');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const card = btn.closest('.car-card');
+        if (card) openCarModal(card);
+    });
+
+    /* ============================================================
+       5. MINI CALCULATOR (inside car modal)
+    ============================================================ */
+    function calcMini() {
+        const dp    = parseFloat(document.getElementById('miniDownPayment').value) || 0;
+        const years = parseInt(document.getElementById('miniYears').value) || 3;
+        const resultEl = document.getElementById('miniCalcResult');
+
+        if (!currentCarPrice || dp <= 0) { resultEl.textContent = '— ج.م / شهر'; return; }
+        if (dp >= currentCarPrice)       { resultEl.textContent = '✓ مدفوع بالكامل'; return; }
+
+        const loan    = currentCarPrice - dp;
+        const total   = loan + (loan * 0.35 * years);
+        const monthly = Math.round(total / (years * 12));
+        resultEl.textContent = monthly.toLocaleString('en-US') + ' ج.م / شهر';
+    }
+
+    /* ============================================================
+       6. MAIN INSTALLMENT CALCULATOR
+    ============================================================ */
+    function calculateLoan() {
+        const price      = parseFloat(document.getElementById('carPrice').value)      || 0;
+        const dp         = parseFloat(document.getElementById('downPayment').value)   || 0;
+        const years      = parseInt(document.getElementById('loanYears').value)       || 3;
+        const resultEl   = document.getElementById('calcResult');
+
+        if (dp > price) {
+            resultEl.style.fontSize = '1.3rem';
+            resultEl.style.color    = '#c0392b';
+            resultEl.textContent    = '⚠️ المقدم أكبر من السعر';
+            return;
+        }
+        resultEl.style.color    = 'var(--accent)';
+        resultEl.style.fontSize = 'clamp(1.8rem, 5vw, 3rem)';
+
+        if (!price || dp <= 0) { resultEl.textContent = '0 ج.م'; return; }
+
+        const loan    = price - dp;
+        const total   = loan + (loan * 0.35 * years);
+        const monthly = Math.round(total / (years * 12));
+        resultEl.textContent = monthly.toLocaleString('en-US') + ' ج.م';
+    }
+
+    /* ============================================================
+       7. TRADE-IN WHATSAPP FORM
+    ============================================================ */
+    document.getElementById('tradeForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const model     = document.getElementById('tradeModel').value.trim();
+        const condition = document.getElementById('tradeCondition').value.trim();
+        const details   = document.getElementById('tradeDetails').value.trim();
+        if (!model) { alert('من فضلك اكتب نوع وموديل العربية أولاً'); return; }
+        const msg = `أهلاً اوتو كار عزام، حابب أقدم طلب بخصوص سيارة:\n- النوع والموديل: ${model}\n- الحالة والعداد: ${condition}\n- تفاصيل إضافية: ${details}`;
+        window.open(`https://wa.me/201019284211?text=${encodeURIComponent(msg)}`, '_blank');
+    });
+
+    /* ============================================================
+       8. CONTACT MODAL
+    ============================================================ */
+    function openContactModal()  {
+        document.getElementById('contactModal').classList.add('active');
+        document.body.classList.add('modal-open');
+    }
+    function closeContactModal() {
+        document.getElementById('contactModal').classList.remove('active');
+        document.body.classList.remove('modal-open');
+    }
+
+    document.getElementById('openContactModal').addEventListener('click', openContactModal);
+    document.getElementById('closeContactModal').addEventListener('click', closeContactModal);
+    document.getElementById('contactModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeContactModal();
+    });
+
+    </script>
+
+</body>
+</html>
