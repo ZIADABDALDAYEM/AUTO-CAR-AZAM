@@ -890,6 +890,98 @@
     /* light mode header */
     body.light-mode header { background: rgba(255,255,255,0.96); }
 
+    /* ============================================================
+       LIGHTBOX — full-screen image viewer
+    ============================================================ */
+    #lightboxOverlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.95);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+        touch-action: none;
+    }
+    #lightboxOverlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+    .lb-img-wrap {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 70px;
+    }
+    @media (max-width: 480px) { .lb-img-wrap { padding: 56px 50px; } }
+    #lbMainImg {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        border-radius: 8px;
+        transition: opacity 0.22s ease;
+        display: block;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+        user-select: none;
+        -webkit-user-drag: none;
+    }
+    .lb-close {
+        position: fixed;
+        top: 16px; left: 16px;
+        width: 40px; height: 40px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: #fff;
+        font-size: 1.3rem;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        z-index: 10001;
+        transition: background 0.2s, transform 0.2s;
+        backdrop-filter: blur(6px);
+    }
+    .lb-close:hover { background: var(--accent); transform: scale(1.08); }
+    .lb-counter {
+        position: fixed;
+        top: 20px;
+        left: 50%; transform: translateX(-50%);
+        color: rgba(255,255,255,0.75);
+        font-size: 0.85rem;
+        font-family: 'Cairo', sans-serif;
+        font-weight: 600;
+        background: rgba(0,0,0,0.45);
+        padding: 4px 14px;
+        border-radius: 20px;
+        z-index: 10001;
+        backdrop-filter: blur(4px);
+        white-space: nowrap;
+    }
+    .lb-nav {
+        position: fixed;
+        top: 50%; transform: translateY(-50%);
+        width: 44px; height: 44px;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.18);
+        backdrop-filter: blur(6px);
+        border-radius: 50%;
+        color: #fff;
+        font-size: 1rem;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        z-index: 10001;
+        transition: background 0.2s, transform 0.2s;
+    }
+    .lb-nav:hover { background: var(--accent); border-color: var(--accent); transform: translateY(-50%) scale(1.08); }
+    .lb-nav.lb-prev { left: 14px; }
+    .lb-nav.lb-next { right: 14px; }
+    .lb-nav[hidden] { display: none !important; }
+
     /* Tips section — reuse car-card style */
     .tip-tag {
         display: inline-block;
@@ -898,6 +990,49 @@
         font-size: 0.78rem;
         font-weight: 700;
         margin-bottom: 10px;
+    }
+
+    /* ============================================================
+       SERVICE ICON CIRCLES — professional look
+    ============================================================ */
+    .service-icon-wrap {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: rgba(184,144,71,0.12);
+        border: 1.5px solid rgba(184,144,71,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 18px;
+        transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
+    }
+    .review-card:hover .service-icon-wrap {
+        background: rgba(184,144,71,0.22);
+        box-shadow: 0 0 0 6px rgba(184,144,71,0.08);
+        transform: translateY(-3px);
+    }
+    .service-icon-wrap i {
+        font-size: 1.7rem;
+        color: var(--accent);
+    }
+
+    /* TIP ICON CIRCLES */
+    .tip-icon-wrap {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 14px;
+        transition: transform 0.25s;
+    }
+    .car-card:hover .tip-icon-wrap {
+        transform: translateY(-2px);
+    }
+    .tip-icon-wrap i {
+        font-size: 1.4rem;
     }
 
     /* Scrollbar inside modal */
@@ -1098,13 +1233,13 @@
     ====================================================== -->
     <div class="modal-overlay" id="carDetailsModal" role="dialog" aria-modal="true" aria-label="تفاصيل السيارة">
         <div class="modal-content">
-            <button class="close-modal" id="closeCarModal" aria-label="إغلاق">&times;</button>
-            <button class="btn-outline back-details-btn" id="detailsBackBtn"><i class="fas fa-arrow-right"></i> رجوع</button>
+            <!-- Only the back button — × removed -->
+            <button class="btn-outline back-details-btn" id="detailsBackBtn" style="position:absolute; top:14px; right:14px; z-index:11; display:inline-flex; align-items:center; gap:6px; padding:7px 14px; font-size:0.85rem;"><i class="fas fa-arrow-right"></i> رجوع</button>
 
-            <div class="modal-inner">
-                <!-- Gallery -->
-                <div class="modal-gallery" id="modalGallery">
-                    <img id="modalMainImage" src="" alt="صورة السيارة">
+            <div class="modal-inner" style="padding-top:52px;">
+                <!-- Gallery — click image to open lightbox -->
+                <div class="modal-gallery" id="modalGallery" style="cursor:zoom-in;">
+                    <img id="modalMainImage" src="" alt="صورة السيارة" style="cursor:zoom-in;">
                     <button class="gallery-btn prev" id="galleryPrev" aria-label="السابق"><i class="fas fa-chevron-left"></i></button>
                     <button class="gallery-btn next" id="galleryNext" aria-label="التالي"><i class="fas fa-chevron-right"></i></button>
                     <div class="gallery-dots" id="galleryDots"></div>
@@ -1256,17 +1391,23 @@
             </div>
             <div class="car-grid">
                 <div class="review-card" style="text-align:center; padding:28px;">
-                    <i class="fas fa-car-side" style="font-size:2.2rem; color:var(--accent); margin-bottom:14px; display:block;"></i>
+                    <div class="service-icon-wrap">
+                        <i class="fas fa-car-side"></i>
+                    </div>
                     <h3 style="margin-bottom:10px;">نخبة السيارات المعتمدة</h3>
                     <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.65;">تشكيلة حصرية من سيارات الزيرو والكسر زيرو والمستعمل، خضعت لأدق فحص فني لضمان جودتها.</p>
                 </div>
                 <div class="review-card" style="text-align:center; padding:28px;">
-                    <i class="fas fa-calculator" style="font-size:2.2rem; color:var(--accent); margin-bottom:14px; display:block;"></i>
+                    <div class="service-icon-wrap">
+                        <i class="fas fa-calculator"></i>
+                    </div>
                     <h3 style="margin-bottom:10px;">أنظمة تقسيط مرنة</h3>
                     <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.65;">خطط تقسيط بالتعاون مع كبرى البنوك وشركات التمويل، بالإضافة للقسط المباشر.</p>
                 </div>
                 <div class="review-card" style="text-align:center; padding:28px;">
-                    <i class="fas fa-exchange-alt" style="font-size:2.2rem; color:var(--accent); margin-bottom:14px; display:block;"></i>
+                    <div class="service-icon-wrap">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
                     <h3 style="margin-bottom:10px;">استبدال السيارات</h3>
                     <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.65;">نُثمن سيارتك الحالية بأعلى سعر في السوق لتنتقل إلى وجهتك القادمة بسلاسة.</p>
                 </div>
@@ -1284,16 +1425,25 @@
         </div>
         <div class="car-grid">
             <div class="car-card" style="padding:22px;">
+                <div class="tip-icon-wrap" style="background:rgba(184,144,71,0.12); border:1.5px solid rgba(184,144,71,0.25);">
+                    <i class="fas fa-search" style="color:var(--accent);"></i>
+                </div>
                 <span class="tip-tag" style="background:var(--accent); color:#fff;">نصيحة فنية</span>
                 <h4 style="margin:12px 0 8px; font-size:1rem;">أهمية الفحص الشامل</h4>
                 <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.65;">قبل شراء أي سيارة مستعملة، تأكد من فحصها في مركز معتمد للوقوف على حالة الشاسيه والموتور والدهان.</p>
             </div>
             <div class="car-card" style="padding:22px;">
+                <div class="tip-icon-wrap" style="background:rgba(40,167,69,0.1); border:1.5px solid rgba(40,167,69,0.25);">
+                    <i class="fas fa-wallet" style="color:#28a745;"></i>
+                </div>
                 <span class="tip-tag" style="background:#28a745; color:#fff;">نصيحة مالية</span>
                 <h4 style="margin:12px 0 8px; font-size:1rem;">حساب الميزانية المخفية</h4>
                 <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.65;">اترك جزءاً من ميزانيتك لمصاريف الترخيص والتأمين والصيانة الدورية الأولى.</p>
             </div>
             <div class="car-card" style="padding:22px;">
+                <div class="tip-icon-wrap" style="background:rgba(255,193,7,0.1); border:1.5px solid rgba(255,193,7,0.25);">
+                    <i class="fas fa-oil-can" style="color:#ffc107;"></i>
+                </div>
                 <span class="tip-tag" style="background:#ffc107; color:#000;">الحفاظ على السيارة</span>
                 <h4 style="margin:12px 0 8px; font-size:1rem;">الالتزام بمواعيد الزيوت</h4>
                 <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.65;">تغيير زيت الموتور والفتيس في مواعيده المحددة هو خط الدفاع الأول لأجزاء السيارة الميكانيكية.</p>
@@ -1339,25 +1489,38 @@
     </div>
 
     <!-- ======================================================
+         LIGHTBOX — Full-screen image viewer
+    ====================================================== -->
+    <div id="lightboxOverlay" role="dialog" aria-modal="true" aria-label="عرض الصورة">
+        <button class="lb-close" id="lbCloseBtn" aria-label="إغلاق">&times;</button>
+        <div class="lb-counter" id="lbCounter">1 / 1</div>
+        <button class="lb-nav lb-prev" id="lbPrev" aria-label="السابق"><i class="fas fa-chevron-right"></i></button>
+        <button class="lb-nav lb-next" id="lbNext" aria-label="التالي"><i class="fas fa-chevron-left"></i></button>
+        <div class="lb-img-wrap" id="lbImgWrap">
+            <img id="lbMainImg" src="" alt="صورة السيارة">
+        </div>
+    </div>
+
+    <!-- ======================================================
          FOOTER
     ====================================================== -->
     <footer id="contact">
         <div class="container" style="padding:0; padding-bottom:20px;">
             <span class="footer-text-logo">AUTO CAR AZAM</span>
 
-            <div class="footer-links">
+            <div class="footer-links" style="display:flex; justify-content:center; align-items:center; gap:14px; flex-wrap:wrap;">
                 <a href="https://www.facebook.com/share/1PMJ1Kiue5/?mibextid=wwXIfr"
                    class="btn-main" style="background:#1877F2;" target="_blank" rel="noopener">
                     <i class="fab fa-facebook-f"></i> فيسبوك
-                </a>
-                <a href="https://wa.me/201019284211" class="btn-main"
-                   style="background:#25d366;" target="_blank" rel="noopener">
-                    <i class="fab fa-whatsapp"></i> واتساب
                 </a>
                 <a href="tel:+201019284211" class="btn-main"
                    style="width:48px; height:48px; padding:0; justify-content:center; border-radius:50%;"
                    aria-label="اتصال">
                     <i class="fas fa-phone-alt" style="margin:0;"></i>
+                </a>
+                <a href="https://wa.me/201019284211" class="btn-main"
+                   style="background:#25d366;" target="_blank" rel="noopener">
+                    <i class="fab fa-whatsapp"></i> واتساب
                 </a>
             </div>
 
@@ -1422,6 +1585,12 @@
             closeSidebar();
             closeCarModal();
             closeContactModal();
+            if (document.getElementById('lightboxOverlay').classList.contains('active')) {
+                document.getElementById('lightboxOverlay').classList.remove('active');
+                if (!document.getElementById('carDetailsModal').classList.contains('active')) {
+                    document.body.classList.remove('modal-open');
+                }
+            }
         }
     });
 
@@ -1617,10 +1786,20 @@
         btn.addEventListener('click', () => activateTab(btn.dataset.tab));
     });
 
-    // Close modal events
-    document.getElementById('closeCarModal').addEventListener('click', closeCarModal);
+    // Close modal events — × button removed; overlay click and Escape still close
     document.getElementById('carDetailsModal').addEventListener('click', (e) => {
         if (e.target === e.currentTarget) closeCarModal();
+    });
+
+    // Make gallery image open lightbox on click
+    document.getElementById('modalMainImage').addEventListener('click', () => {
+        openLightbox(modalImgIdx);
+    });
+    document.getElementById('modalGallery').addEventListener('click', (e) => {
+        // open lightbox only when clicking the image, not the nav arrows
+        if (e.target === document.getElementById('modalMainImage')) {
+            openLightbox(modalImgIdx);
+        }
     });
 
     // Attach "التفاصيل" buttons — using event delegation on car grid
@@ -1706,6 +1885,95 @@
     document.getElementById('contactModal').addEventListener('click', (e) => {
         if (e.target === e.currentTarget) closeContactModal();
     });
+
+    /* ============================================================
+       9. LIGHTBOX — full-screen image viewer
+       - Opens on gallery image click inside car modal
+       - Touch swipe left/right on mobile
+       - Keyboard arrows + ESC
+       - Locks body scroll (no page zoom or reflow)
+       - Closes on outside-image click
+    ============================================================ */
+    let lbImages  = [];
+    let lbIdx     = 0;
+
+    const lbOverlay = document.getElementById('lightboxOverlay');
+    const lbImg     = document.getElementById('lbMainImg');
+    const lbCounter = document.getElementById('lbCounter');
+    const lbPrev    = document.getElementById('lbPrev');
+    const lbNext    = document.getElementById('lbNext');
+
+    function openLightbox(startIdx) {
+        lbImages = modalImages.slice(); // copy current modal images
+        lbIdx    = startIdx || 0;
+        renderLb();
+        lbOverlay.classList.add('active');
+        document.body.classList.add('modal-open');
+    }
+
+    function closeLightbox() {
+        lbOverlay.classList.remove('active');
+        // Only remove modal-open if car modal is also closed
+        if (!document.getElementById('carDetailsModal').classList.contains('active')) {
+            document.body.classList.remove('modal-open');
+        }
+    }
+
+    function renderLb() {
+        lbImg.style.opacity = '0';
+        setTimeout(() => {
+            lbImg.src = lbImages[lbIdx];
+            lbImg.style.opacity = '1';
+        }, 180);
+        lbCounter.textContent = `${lbIdx + 1} / ${lbImages.length}`;
+        const multi = lbImages.length > 1;
+        lbPrev.hidden = !multi;
+        lbNext.hidden = !multi;
+    }
+
+    function lbGoNext() {
+        lbIdx = (lbIdx === lbImages.length - 1) ? 0 : lbIdx + 1;
+        renderLb();
+    }
+    function lbGoPrev() {
+        lbIdx = (lbIdx === 0) ? lbImages.length - 1 : lbIdx - 1;
+        renderLb();
+    }
+
+    document.getElementById('lbCloseBtn').addEventListener('click', closeLightbox);
+    lbPrev.addEventListener('click', lbGoPrev);
+    lbNext.addEventListener('click', lbGoNext);
+
+    // Close on outside-image click (click on overlay bg)
+    lbOverlay.addEventListener('click', (e) => {
+        if (e.target === lbOverlay || e.target === document.getElementById('lbImgWrap')) {
+            closeLightbox();
+        }
+    });
+
+    // Keyboard navigation for lightbox only (Escape handled by global handler above)
+    document.addEventListener('keydown', (e) => {
+        if (!lbOverlay.classList.contains('active')) return;
+        if (e.key === 'ArrowLeft')   { lbGoNext(); }  /* RTL: left = next */
+        if (e.key === 'ArrowRight')  { lbGoPrev(); }
+    });
+
+    // Touch swipe — mobile
+    (function() {
+        let touchStartX = 0;
+        let touchStartY = 0;
+        lbOverlay.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        lbOverlay.addEventListener('touchend', (e) => {
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 45) {
+                if (dx < 0) lbGoNext(); else lbGoPrev();
+            }
+        }, { passive: true });
+    })();
 
     </script>
 
