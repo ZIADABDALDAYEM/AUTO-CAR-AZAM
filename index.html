@@ -1120,7 +1120,7 @@
             <!-- Clean tagline — two thin lines instead of pulsing dot -->
             <div class="hero-tagline">
                 <hr class="hero-tagline-line">
-                <span>سيارات زيرو · كسر زيرو · مستعمل معتمدة ومفحوصة</span>
+                <span>سيارات زيرو · كسر زيرو · مستعمل . معتمدة ومفحوصة</span>
                 <hr class="hero-tagline-line right">
             </div>
         </div>
@@ -1533,7 +1533,7 @@
                 <strong style="color:var(--text-light);">AUTO CAR AZAM</strong>
             </p>
             <p style="margin-top:28px; font-size:0.62rem; color:var(--text-muted); letter-spacing:1px;">
-                تم التصميم والتطوير بواسطة <strong>ENG ZIAD ABDALDAYEM</strong>
+                تم التصميم والتطوير بواسطة <strong>ZIAD ABDALDAYEM</strong>
             </p>
         </div>
     </footer>
@@ -1821,7 +1821,7 @@
         const resultEl = document.getElementById('miniCalcResult');
 
         if (!currentCarPrice || dp <= 0) { resultEl.textContent = '— ج.م / شهر'; return; }
-        if (dp >= currentCarPrice)       { resultEl.textContent = '✓ مدفوع بالكامل'; return; }
+        if (dp >= currentCarPrice)       { resultEl.textContent = '⚠️ المقدم أكبر من السعر'; return; }
 
         const loan    = currentCarPrice - dp;
         const total   = loan + (loan * 0.35 * years);
