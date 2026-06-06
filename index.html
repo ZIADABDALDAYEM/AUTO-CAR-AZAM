@@ -1825,7 +1825,7 @@
 
         const loan    = currentCarPrice - dp;
         const total   = loan + (loan * 0.35 * years);
-        const monthly = Math.round(total / (years * 12));
+       const monthly = Math.ceil((total / (years * 12)) / 100) * 100;
         resultEl.textContent = monthly.toLocaleString('en-US') + ' ج.م / شهر';
     }
 
@@ -1851,7 +1851,7 @@
 
         const loan    = price - dp;
         const total   = loan + (loan * 0.35 * years);
-        const monthly = Math.round(total / (years * 12));
+       const monthly = Math.ceil((total / (years * 12)) / 100) * 100;
         resultEl.textContent = monthly.toLocaleString('en-US') + ' ج.م';
     }
 
