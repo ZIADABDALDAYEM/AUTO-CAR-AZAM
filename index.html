@@ -3,8 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
-    <title>أوتو كار عزام | AUTO CAR AZAM</title>
-    <meta name="description" content="أقوى عروض السيارات المستعملة، كسر الزيرو، والسيارات الجديدة في مصر بأفضل الأسعار.">
+
+    <!-- ============================================================
+         SEO — Title & Description
+    ============================================================ -->
+    <title>AUTO CAR AZAM | معرض سيارات وتقسيط</title>
+    <meta name="description" content="معرض AUTO CAR AZAM لبيع وشراء السيارات المستعملة والزيرو وأنظمة التقسيط بأفضل الأسعار">
+    <meta name="keywords" content="سيارات مستعملة, سيارات للبيع, كسر زيرو, تقسيط سيارات, معرض سيارات, AUTO CAR AZAM, شبين الكوم, المنوفية, سيارات زيرو, استبدال سيارات">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="AUTO CAR AZAM">
+    <link rel="canonical" href="https://auto-car-azam.netlify.app/">
+
+    <!-- ============================================================
+         Open Graph (Facebook / WhatsApp / LinkedIn)
+    ============================================================ -->
+    <meta property="og:type"        content="website">
+    <meta property="og:url"         content="https://auto-car-azam.netlify.app/">
+    <meta property="og:title"       content="AUTO CAR AZAM | معرض سيارات وتقسيط">
+    <meta property="og:description" content="معرض AUTO CAR AZAM لبيع وشراء السيارات المستعملة والزيرو وأنظمة التقسيط بأفضل الأسعار">
+    <meta property="og:image"       content="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=1200">
+    <meta property="og:locale"      content="ar_EG">
+    <meta property="og:site_name"   content="AUTO CAR AZAM">
+
+    <!-- ============================================================
+         Twitter Card
+    ============================================================ -->
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="AUTO CAR AZAM | معرض سيارات وتقسيط">
+    <meta name="twitter:description" content="معرض AUTO CAR AZAM لبيع وشراء السيارات المستعملة والزيرو وأنظمة التقسيط بأفضل الأسعار">
+    <meta name="twitter:image"       content="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=1200">
+
+    <!-- ============================================================
+         Google Analytics (GA4) — Measurement ID: G-TV3F65GZN5
+    ============================================================ -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TV3F65GZN5"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){ dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-TV3F65GZN5');
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -128,9 +166,9 @@
                     ${isSold ? '<span class="badge-sold">SOLD OUT</span>' : `<span class="car-tag">${car.carStatus || ''}</span>`}
                     ${allImgs.length > 0
                         ? allImgs.map((src, i) =>
-                            `<img loading="lazy" src="${src}" alt="${car.name || 'سيارة'}" ${i > 0 ? '' : ''}>`
+                            `<img loading="lazy" src="${src}" alt="${car.name || 'سيارة'}${car.year ? ' موديل ' + car.year : ''} - AUTO CAR AZAM" ${i > 0 ? '' : ''}>`
                           ).join('')
-                        : `<img loading="lazy" src="${thumbSrc}" alt="${car.name || 'سيارة'}">`
+                        : `<img loading="lazy" src="${thumbSrc}" alt="${car.name || 'سيارة'}${car.year ? ' موديل ' + car.year : ''} - AUTO CAR AZAM">`
                     }
                 </div>
 
@@ -2401,7 +2439,7 @@
 
             <div class="modal-inner" style="padding-top:52px;">
                 <div class="modal-gallery" id="modalGallery" style="cursor:zoom-in;">
-                    <img id="modalMainImage" src="" alt="صورة السيارة" style="cursor:zoom-in;">
+                    <img id="modalMainImage" src="" alt="صورة السيارة - AUTO CAR AZAM معرض سيارات" style="cursor:zoom-in;">
                     <button class="gallery-btn prev" id="galleryPrev" aria-label="السابق"><i class="fas fa-chevron-left"></i></button>
                     <button class="gallery-btn next" id="galleryNext" aria-label="التالي"><i class="fas fa-chevron-right"></i></button>
                     <div class="gallery-dots" id="galleryDots"></div>
@@ -2653,7 +2691,7 @@
         <button class="lb-nav lb-prev" id="lbPrev" aria-label="السابق"><i class="fas fa-chevron-right"></i></button>
         <button class="lb-nav lb-next" id="lbNext" aria-label="التالي"><i class="fas fa-chevron-left"></i></button>
         <div class="lb-img-wrap" id="lbImgWrap">
-            <img id="lbMainImg" src="" alt="صورة السيارة">
+            <img id="lbMainImg" src="" alt="صورة السيارة بدقة عالية - AUTO CAR AZAM">
         </div>
     </div>
 
