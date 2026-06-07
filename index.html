@@ -845,6 +845,9 @@
                     carData.createdAt = serverTimestamp();
                     await addDoc(collection(db, "cars"), carData);
                     showToast(`✅ تمت إضافة "${name}" بنجاح`, 'success');
+                    // 🔔 إرسال إشعارات واتساپ والمتصفح عند إضافة سيارة جديدة فقط
+                    if (window.notifyWaSubscribers)          window.notifyWaSubscribers(name, price, year);
+                    if (window.sendBrowserPushNotification)  window.sendBrowserPushNotification(name, price, year);
                 }
 
                 resetAdminForm();
@@ -2327,6 +2330,191 @@
     .toast-error   { border-color: rgba(192,57,43,0.5); }
     .toast-info    { border-color: rgba(184,144,71,0.4); }
 
+    /* ============================================================
+       🔔 WHATSAPP SUBSCRIBERS & PUSH NOTIFICATION STYLES
+    ============================================================ */
+
+    /* زر الاشتراك في الهامبورجر */
+    .sidebar-notif-btn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0 14px 18px;
+        padding: 11px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        color: var(--text-light);
+        font-weight: 600;
+        font-size: 0.97rem;
+        font-family: 'Cairo', sans-serif;
+        border: 1px solid rgba(37,211,102,0.3);
+        background: rgba(37,211,102,0.07);
+        transition: background 0.2s, color 0.2s;
+        width: calc(100% - 28px);
+    }
+    body.light-mode .sidebar-notif-btn { color: #1a1a1a; }
+    .sidebar-notif-btn:hover { background: rgba(37,211,102,0.15); }
+    .sidebar-notif-btn i { width: 20px; text-align: center; color: #25d366; }
+
+    /* مودال الاشتراك في إشعارات واتساب */
+    #waNotifModal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.88);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 7000;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.35s ease, visibility 0.35s ease;
+        padding: 20px;
+    }
+    #waNotifModal.active { opacity: 1; visibility: visible; }
+
+    .wa-notif-box {
+        background: var(--card-bg);
+        border: 1px solid rgba(37,211,102,0.25);
+        border-radius: 20px;
+        padding: 36px 28px;
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+        transform: translateY(-20px) scale(0.97);
+        transition: transform 0.35s ease;
+        position: relative;
+    }
+    #waNotifModal.active .wa-notif-box { transform: translateY(0) scale(1); }
+    body.light-mode .wa-notif-box { background: #fff; }
+
+    .wa-notif-icon {
+        width: 68px; height: 68px;
+        background: rgba(37,211,102,0.12);
+        border: 2px solid rgba(37,211,102,0.3);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 16px;
+    }
+    .wa-notif-icon i { font-size: 2rem; color: #25d366; }
+    .wa-notif-box h3 { font-size: 1.2rem; font-weight: 700; color: var(--text-light); margin-bottom: 6px; }
+    body.light-mode .wa-notif-box h3 { color: #1a1a1a; }
+    .wa-notif-box p { font-size: 0.83rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.65; }
+
+    .wa-notif-input {
+        width: 100%;
+        padding: 13px 16px;
+        border: 1px solid rgba(37,211,102,0.3);
+        border-radius: 12px;
+        background: var(--primary-dark);
+        color: var(--text-light);
+        font-family: 'Cairo', sans-serif;
+        font-size: 1rem;
+        direction: ltr;
+        text-align: center;
+        outline: none;
+        transition: border 0.25s;
+        margin-bottom: 14px;
+        letter-spacing: 1px;
+    }
+    .wa-notif-input:focus { border-color: #25d366; box-shadow: 0 0 0 3px rgba(37,211,102,0.1); }
+    body.light-mode .wa-notif-input { background: #f9f9f9; color: #1a1a1a; }
+
+    .wa-notif-close {
+        position: absolute;
+        top: 14px; left: 14px;
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.08);
+        border: none;
+        color: var(--text-muted);
+        font-size: 1.2rem;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.2s, color 0.2s;
+    }
+    .wa-notif-close:hover { background: #c0392b; color: #fff; }
+
+    .wa-notif-list {
+        text-align: right;
+        margin-bottom: 16px;
+    }
+    .wa-notif-list li {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 0;
+        border-bottom: 1px solid var(--border-subtle);
+        list-style: none;
+    }
+    .wa-notif-list li:last-child { border-bottom: none; }
+    .wa-notif-list li i { color: #25d366; font-size: 0.85rem; flex-shrink: 0; }
+
+    /* بانر إشعارات المتصفح */
+    #pushBanner {
+        position: fixed;
+        bottom: -120px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 8500;
+        background: var(--card-bg);
+        border: 1px solid var(--border-subtle);
+        border-radius: 16px;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+        width: min(420px, calc(100vw - 32px));
+        transition: bottom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        backdrop-filter: blur(10px);
+    }
+    #pushBanner.show { bottom: 90px; }
+    @media (max-width:480px) { #pushBanner.show { bottom: 80px; } }
+    body.light-mode #pushBanner { background: #fff; border-color: #e0e0e0; }
+
+    .push-banner-icon {
+        width: 44px; height: 44px;
+        background: rgba(184,144,71,0.12);
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .push-banner-icon i { color: var(--accent); font-size: 1.2rem; }
+    .push-banner-text { flex: 1; }
+    .push-banner-text strong { font-size: 0.88rem; color: var(--text-light); display: block; margin-bottom: 2px; }
+    body.light-mode .push-banner-text strong { color: #1a1a1a; }
+    .push-banner-text span { font-size: 0.75rem; color: var(--text-muted); }
+    .push-banner-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .push-allow-btn {
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        color: #fff;
+        border: none;
+        padding: 7px 14px;
+        border-radius: 8px;
+        font-family: 'Cairo', sans-serif;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: transform 0.2s;
+    }
+    .push-allow-btn:hover { transform: translateY(-1px); }
+    .push-deny-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-family: 'Cairo', sans-serif;
+        font-size: 0.75rem;
+        cursor: pointer;
+        text-align: center;
+    }
+    .push-deny-btn:hover { color: var(--text-light); }
+
     /* مؤشر التحميل عند انتظار Firestore */
     .loading-spinner {
         display: flex;
@@ -2365,6 +2553,9 @@
             <a href="#tips"       data-close-sidebar><i class="fas fa-lightbulb"></i> نصائح</a>
             <a href="#contact"    data-close-sidebar><i class="fas fa-phone-alt"></i> تواصل معنا</a>
         </nav>
+        <button class="sidebar-notif-btn" id="openWaNotifModal" aria-label="اشتراك في إشعارات السيارات الجديدة">
+            <i class="fab fa-whatsapp"></i> إشعارات السيارات الجديدة
+        </button>
         <button class="sidebar-theme" id="sidebarThemeBtn" aria-label="تغيير الوضع">
             <i class="fas fa-moon"></i> تغيير الوضع
         </button>
@@ -2901,6 +3092,54 @@
     </div>
 
     <!-- ======================================================
+         🔔 WHATSAPP NOTIFICATION SUBSCRIPTION MODAL
+    ====================================================== -->
+    <div id="waNotifModal" role="dialog" aria-modal="true" aria-label="الاشتراك في إشعارات واتساب">
+        <div class="wa-notif-box">
+            <button class="wa-notif-close" id="closeWaNotifModal" aria-label="إغلاق">&times;</button>
+            <div class="wa-notif-icon">
+                <i class="fab fa-whatsapp"></i>
+            </div>
+            <h3>إشعارات السيارات الجديدة</h3>
+            <p>سجّل رقم واتساپك وهنبعتلك رسالة فور إضافة أي سيارة جديدة في المعرض</p>
+
+            <ul class="wa-notif-list">
+                <li><i class="fas fa-check-circle"></i> إشعار فوري بكل سيارة جديدة</li>
+                <li><i class="fas fa-check-circle"></i> السعر والمواصفات في رسالة واحدة</li>
+                <li><i class="fas fa-check-circle"></i> إلغاء الاشتراك في أي وقت</li>
+            </ul>
+
+            <input class="wa-notif-input" type="tel" id="waSubscriberPhone"
+                placeholder="01xxxxxxxxx" maxlength="11" inputmode="numeric">
+            <div id="waNotifError" style="color:#e74c3c; font-size:0.8rem; margin:-8px 0 10px; min-height:18px;"></div>
+
+            <button class="btn-main" id="waNotifSubscribeBtn" style="width:100%; justify-content:center; background:#25d366;">
+                <i class="fab fa-whatsapp"></i> اشترك الآن
+            </button>
+            <p style="font-size:0.72rem; color:var(--text-muted); margin-top:12px; line-height:1.6;">
+                بالاشتراك توافق على استقبال رسائل من AUTO CAR AZAM على واتساپ
+            </p>
+        </div>
+    </div>
+
+    <!-- ======================================================
+         🔔 BROWSER PUSH NOTIFICATION BANNER
+    ====================================================== -->
+    <div id="pushBanner" role="complementary" aria-label="تفعيل إشعارات المتصفح">
+        <div class="push-banner-icon">
+            <i class="fas fa-bell"></i>
+        </div>
+        <div class="push-banner-text">
+            <strong>ابقَ أول المطلعين 🔔</strong>
+            <span>فعّل الإشعارات وخدنا نعلمك بكل سيارة جديدة</span>
+        </div>
+        <div class="push-banner-actions">
+            <button class="push-allow-btn" id="pushAllowBtn">السماح</button>
+            <button class="push-deny-btn" id="pushDenyBtn">لاحقاً</button>
+        </div>
+    </div>
+
+    <!-- ======================================================
          FOOTER
     ====================================================== -->
     <footer id="contact">
@@ -3029,6 +3268,11 @@
         document.getElementById('lightboxOverlay').classList.remove('active');
         // إغلاق نافذة تسجيل دخول الإدارة
         document.getElementById('adminLoginModal').classList.remove('active');
+        // إغلاق مودال الاشتراك في واتساپ
+        const waModal = document.getElementById('waNotifModal');
+        if (waModal && waModal.classList.contains('active')) {
+            waModal.classList.remove('active');
+        }
         // تفقّد ما إذا كان يجب إزالة modal-open
         const anyModal = document.querySelector('.modal-overlay.active, #adminPanel.active, #adminLoginModal.active, #lightboxOverlay.active');
         if (!anyModal) document.body.classList.remove('modal-open');
@@ -3072,6 +3316,226 @@
             document.getElementById('contactModal').classList.remove('active');
             document.body.classList.remove('modal-open');
         }
+    });
+
+    /* ============================================================
+       🔔 WHATSAPP SUBSCRIPTION SYSTEM
+       يحفظ أرقام المشتركين في localStorage ويفتح واتساپ للمسؤول
+       لما تضاف سيارة جديدة من Firebase module يستدعي notifyWaSubscribers()
+    ============================================================ */
+    const WA_ADMIN_NUMBER = '201019284211';
+    const WA_SUBS_KEY     = 'aca_wa_subscribers'; // مفتاح التخزين المحلي
+
+    function getWaSubscribers() {
+        try { return JSON.parse(localStorage.getItem(WA_SUBS_KEY)) || []; } catch(e) { return []; }
+    }
+    function saveWaSubscribers(arr) {
+        try { localStorage.setItem(WA_SUBS_KEY, JSON.stringify(arr)); } catch(e) {}
+    }
+
+    /* فتح مودال الاشتراك */
+    const waNotifModal   = document.getElementById('waNotifModal');
+    const openWaBtn      = document.getElementById('openWaNotifModal');
+    const closeWaBtn     = document.getElementById('closeWaNotifModal');
+    const waPhoneInput   = document.getElementById('waSubscriberPhone');
+    const waNotifError   = document.getElementById('waNotifError');
+    const waSubscribeBtn = document.getElementById('waNotifSubscribeBtn');
+
+    function openWaModal() {
+        closeSidebar();
+        waPhoneInput.value = '';
+        waNotifError.textContent = '';
+        waNotifModal.classList.add('active');
+        document.body.classList.add('modal-open');
+        setTimeout(() => waPhoneInput.focus(), 300);
+    }
+    function closeWaModal() {
+        waNotifModal.classList.remove('active');
+        document.body.classList.remove('modal-open');
+    }
+
+    openWaBtn && openWaBtn.addEventListener('click', openWaModal);
+    closeWaBtn && closeWaBtn.addEventListener('click', closeWaModal);
+    waNotifModal && waNotifModal.addEventListener('click', (e) => {
+        if (e.target === waNotifModal) closeWaModal();
+    });
+
+    /* التحقق من رقم الهاتف وحفظه */
+    function validateEgyptPhone(num) {
+        return /^01[0125][0-9]{8}$/.test(num.replace(/\s+/g,''));
+    }
+
+    waSubscribeBtn && waSubscribeBtn.addEventListener('click', () => {
+        const phone = waPhoneInput.value.trim().replace(/\s+/g,'');
+        if (!validateEgyptPhone(phone)) {
+            waNotifError.textContent = '⚠️ رقم غير صحيح — ادخل 11 رقم يبدأ بـ 01';
+            waPhoneInput.focus();
+            return;
+        }
+        const subs = getWaSubscribers();
+        if (subs.includes(phone)) {
+            waNotifError.style.color = '#27ae60';
+            waNotifError.textContent = '✅ أنت مشترك بالفعل!';
+            return;
+        }
+        subs.push(phone);
+        saveWaSubscribers(subs);
+
+        /* نبعت رسالة تأكيد للمشترك مباشرة */
+        const confirmMsg = encodeURIComponent(
+            `أهلاً بك في AUTO CAR AZAM 🚗\nتم تسجيل رقمك بنجاح!\nهنتواصل معاك فور إضافة أي سيارة جديدة.`
+        );
+        const intlPhone = phone.replace(/^0/, '2');
+        window.open(`https://wa.me/${intlPhone}?text=${confirmMsg}`, '_blank');
+
+        /* تسجيل الاشتراك عند المسؤول */
+        const adminMsg = encodeURIComponent(
+            `📲 مشترك جديد في إشعارات السيارات:\nالرقم: ${phone}`
+        );
+        setTimeout(() => {
+            window.open(`https://wa.me/${WA_ADMIN_NUMBER}?text=${adminMsg}`, '_blank');
+        }, 1000);
+
+        closeWaModal();
+        if (window.showToast) showToast('✅ تم الاشتراك بنجاح! ستصلك إشعارات السيارات الجديدة', 'success');
+    });
+
+    /* إرسال إشعار لكل المشتركين عند إضافة سيارة جديدة
+       يُستدعى من module Firebase بعد addDoc */
+    window.notifyWaSubscribers = function(carName, carPrice, carYear) {
+        const subs = getWaSubscribers();
+        if (!subs.length) return;
+        const priceStr = carPrice ? carPrice.toLocaleString('en-US') + ' ج.م' : '';
+        const msg = encodeURIComponent(
+            `🚗 سيارة جديدة في AUTO CAR AZAM!\n` +
+            `━━━━━━━━━━━━━━━\n` +
+            `🏷️ ${carName || 'سيارة جديدة'}${carYear ? ' ' + carYear : ''}\n` +
+            `💰 السعر: ${priceStr}\n` +
+            `━━━━━━━━━━━━━━━\n` +
+            `شوف كل التفاصيل والصور على الموقع:\nhttps://auto-car-azam.netlify.app/\n\n` +
+            `للإلغاء الاشتراك: راسلنا بكلمة "إلغاء"`
+        );
+        /* نفتح واتساپ للمسؤول مع قائمة الأرقام لإرسال يدوي أو broadcast */
+        const adminNotif = encodeURIComponent(
+            `📢 سيارة جديدة أُضيفت:\n${carName || ''} ${carYear || ''}\nالسعر: ${priceStr}\n\n` +
+            `عدد المشتركين: ${subs.length}\nالأرقام:\n${subs.join('\n')}\n\n` +
+            `أرسل لهم هذه الرسالة:\n\n` +
+            decodeURIComponent(msg)
+        );
+        window.open(`https://wa.me/${WA_ADMIN_NUMBER}?text=${adminNotif}`, '_blank');
+    };
+
+    /* ============================================================
+       🔔 BROWSER PUSH NOTIFICATION SYSTEM (Notification API)
+       يستخدم Notification API المدمج في المتصفح — مجاني 100%
+    ============================================================ */
+    const PUSH_DISMISSED_KEY = 'aca_push_dismissed';
+    const pushBanner   = document.getElementById('pushBanner');
+    const pushAllowBtn = document.getElementById('pushAllowBtn');
+    const pushDenyBtn  = document.getElementById('pushDenyBtn');
+
+    /* تسجيل Service Worker للإشعارات في الخلفية */
+    const SW_SCRIPT = `
+self.addEventListener('push', (event) => {
+    const data = event.data ? event.data.json() : {};
+    const title = data.title || 'AUTO CAR AZAM';
+    const options = {
+        body: data.body || 'سيارة جديدة أُضيفت في المعرض!',
+        icon: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=192',
+        badge: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=72',
+        dir: 'rtl',
+        lang: 'ar',
+        tag: 'new-car',
+        renotify: true,
+        data: { url: data.url || 'https://auto-car-azam.netlify.app/' }
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(clients.openWindow(event.notification.data.url));
+});
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', () => self.clients.claim());
+`;
+
+    /* إنشاء Service Worker من blob إذا لم يكن موجوداً */
+    async function registerPushSW() {
+        if (!('serviceWorker' in navigator) || !('Notification' in window)) return null;
+        try {
+            const existing = await navigator.serviceWorker.getRegistration('./');
+            if (existing) return existing;
+            const blob = new Blob([SW_SCRIPT], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            const reg   = await navigator.serviceWorker.register(swUrl, { scope: './' });
+            return reg;
+        } catch(e) { return null; }
+    }
+
+    /* طلب إذن الإشعارات */
+    async function requestPushPermission() {
+        if (!('Notification' in window)) {
+            showToast('❌ متصفحك لا يدعم الإشعارات', 'error');
+            return;
+        }
+        hidePushBanner();
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+            await registerPushSW();
+            try { localStorage.setItem(PUSH_DISMISSED_KEY, 'granted'); } catch(e) {}
+            showToast('✅ تم تفعيل الإشعارات! ستصلك إشعارات السيارات الجديدة', 'success');
+            /* إشعار ترحيبي فوري */
+            new Notification('AUTO CAR AZAM 🚗', {
+                body: 'تم تفعيل الإشعارات بنجاح! ستصلك أخبار السيارات الجديدة.',
+                icon: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=192',
+                dir: 'rtl',
+                lang: 'ar'
+            });
+        } else {
+            try { localStorage.setItem(PUSH_DISMISSED_KEY, 'denied'); } catch(e) {}
+            showToast('تم الإلغاء — يمكنك التفعيل لاحقاً من الإعدادات', 'info');
+        }
+    }
+
+    /* إخفاء البانر */
+    function hidePushBanner() {
+        pushBanner.classList.remove('show');
+    }
+
+    /* إرسال إشعار متصفح عند إضافة سيارة جديدة */
+    window.sendBrowserPushNotification = function(carName, carPrice, carYear) {
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+        const priceStr = carPrice ? carPrice.toLocaleString('en-US') + ' ج.م' : '';
+        new Notification(`🚗 سيارة جديدة — AUTO CAR AZAM`, {
+            body: `${carName || 'سيارة جديدة'}${carYear ? ' ' + carYear : ''}${priceStr ? ' · ' + priceStr : ''}`,
+            icon: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=192',
+            dir: 'rtl',
+            lang: 'ar',
+            tag: 'new-car-' + Date.now(),
+            requireInteraction: false
+        });
+    };
+
+    /* عرض البانر بعد 4 ثواني إذا لم يُرفض مسبقاً */
+    (function initPushBanner() {
+        if (!('Notification' in window)) return;
+        try {
+            const prev = localStorage.getItem(PUSH_DISMISSED_KEY);
+            if (prev === 'granted' || prev === 'denied') return;
+            if (Notification.permission === 'granted') {
+                localStorage.setItem(PUSH_DISMISSED_KEY, 'granted');
+                registerPushSW();
+                return;
+            }
+            if (Notification.permission === 'denied') return;
+        } catch(e) {}
+        setTimeout(() => pushBanner.classList.add('show'), 4000);
+    })();
+
+    pushAllowBtn && pushAllowBtn.addEventListener('click', requestPushPermission);
+    pushDenyBtn  && pushDenyBtn.addEventListener('click', () => {
+        hidePushBanner();
+        try { localStorage.setItem(PUSH_DISMISSED_KEY, 'later'); } catch(e) {}
     });
 
     /* ============================================================
