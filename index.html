@@ -3323,82 +3323,143 @@
        يحفظ أرقام المشتركين في localStorage ويفتح واتساپ للمسؤول
        لما تضاف سيارة جديدة من Firebase module يستدعي notifyWaSubscribers()
     ============================================================ */
-    const WA_ADMIN_NUMBER = '201019284211';
-    const WA_SUBS_KEY     = 'aca_wa_subscribers'; // مفتاح التخزين المحلي
+// 1. استيراد المكتبات المطلوبة من الفايربيز
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    function getWaSubscribers() {
-        try { return JSON.parse(localStorage.getItem(WA_SUBS_KEY)) || []; } catch(e) { return []; }
+// 2. إعدادات الفايربيز بالبيانات بتاعتك
+const firebaseConfig = {
+    apiKey: "AIzaSyDRjPIw8y58YR1agtGM5HO5kz-RL",
+    appId: "1:56812655247:web:847da9e3f4590ff",
+    messagingSenderId: "56812655247",
+    
+    // 📢 استبدل AUTO-CAR-AZAM باسم مشروعك الحقيقي لو كان مختلفاً
+    authDomain: "auto-car-azam.firebaseapp.com", 
+    projectId: "auto-car-azam",                  
+    storageBucket: "auto-car-azam.appspot.com"
+};
+
+// 3. تهيئة الفايربيز وقاعدة البيانات
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// 4. متغيرات سيستم الواتساب
+const WA_ADMIN_NUMBER = '201019284211';
+const COLLECTION_NAME = 'wa_subscribers'; 
+
+/* فتح وغلق مودال الاشتراك */
+const waNotifModal   = document.getElementById('waNotifModal');
+const openWaBtn      = document.getElementById('openWaNotifModal');
+const closeWaBtn     = document.getElementById('closeWaNotifModal');
+const waPhoneInput   = document.getElementById('waSubscriberPhone');
+const waNotifError   = document.getElementById('waNotifError');
+const waSubscribeBtn = document.getElementById('waNotifSubscribeBtn');
+
+function openWaModal() {
+    if(typeof closeSidebar === 'function') closeSidebar(); 
+    waPhoneInput.value = '';
+    waNotifError.textContent = '';
+    waNotifModal.classList.add('active');
+    document.body.classList.add('modal-open');
+    setTimeout(() => waPhoneInput.focus(), 300);
+}
+function closeWaModal() {
+    waNotifModal.classList.remove('active');
+    document.body.classList.remove('modal-open');
+}
+
+openWaBtn && openWaBtn.addEventListener('click', openWaModal);
+closeWaBtn && closeWaBtn.addEventListener('click', closeWaModal);
+waNotifModal && waNotifModal.addEventListener('click', (e) => {
+    if (e.target === waNotifModal) closeWaModal();
+});
+
+/* التحقق من رقم الهاتف المصري */
+function validateEgyptPhone(num) {
+    return /^01[0125][0-9]{8}$/.test(num.replace(/\s+/g,''));
+}
+
+/* حفظ الاشتراك في الفايرستور */
+waSubscribeBtn && waSubscribeBtn.addEventListener('click', async () => {
+    const phone = waPhoneInput.value.trim().replace(/\s+/g,'');
+    if (!validateEgyptPhone(phone)) {
+        waNotifError.style.color = '#e74c3c';
+        waNotifError.textContent = '⚠️ رقم غير صحيح — ادخل 11 رقم يبدأ بـ 01';
+        waPhoneInput.focus();
+        return;
     }
-    function saveWaSubscribers(arr) {
-        try { localStorage.setItem(WA_SUBS_KEY, JSON.stringify(arr)); } catch(e) {}
-    }
 
-    /* فتح مودال الاشتراك */
-    const waNotifModal   = document.getElementById('waNotifModal');
-    const openWaBtn      = document.getElementById('openWaNotifModal');
-    const closeWaBtn     = document.getElementById('closeWaNotifModal');
-    const waPhoneInput   = document.getElementById('waSubscriberPhone');
-    const waNotifError   = document.getElementById('waNotifError');
-    const waSubscribeBtn = document.getElementById('waNotifSubscribeBtn');
+    waNotifError.style.color = '#3498db';
+    waNotifError.textContent = '⏳ جاري التسجيل...';
 
-    function openWaModal() {
-        closeSidebar();
-        waPhoneInput.value = '';
-        waNotifError.textContent = '';
-        waNotifModal.classList.add('active');
-        document.body.classList.add('modal-open');
-        setTimeout(() => waPhoneInput.focus(), 300);
-    }
-    function closeWaModal() {
-        waNotifModal.classList.remove('active');
-        document.body.classList.remove('modal-open');
-    }
-
-    openWaBtn && openWaBtn.addEventListener('click', openWaModal);
-    closeWaBtn && closeWaBtn.addEventListener('click', closeWaModal);
-    waNotifModal && waNotifModal.addEventListener('click', (e) => {
-        if (e.target === waNotifModal) closeWaModal();
-    });
-
-    /* التحقق من رقم الهاتف وحفظه */
-    function validateEgyptPhone(num) {
-        return /^01[0125][0-9]{8}$/.test(num.replace(/\s+/g,''));
-    }
-
-    waSubscribeBtn && waSubscribeBtn.addEventListener('click', () => {
-        const phone = waPhoneInput.value.trim().replace(/\s+/g,'');
-        if (!validateEgyptPhone(phone)) {
-            waNotifError.textContent = '⚠️ رقم غير صحيح — ادخل 11 رقم يبدأ بـ 01';
-            waPhoneInput.focus();
-            return;
-        }
-        const subs = getWaSubscribers();
-        if (subs.includes(phone)) {
+    try {
+        // التحقق هل الرقم مسجل مسبقاً؟
+        const q = query(collection(db, COLLECTION_NAME), where("phone", "==", phone));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
             waNotifError.style.color = '#27ae60';
             waNotifError.textContent = '✅ أنت مشترك بالفعل!';
             return;
         }
-        subs.push(phone);
-        saveWaSubscribers(subs);
 
-        /* نبعت رسالة تأكيد للمشترك مباشرة */
+        // حفظ الرقم الجديد
+        await addDoc(collection(db, COLLECTION_NAME), {
+            phone: phone,
+            createdAt: new Date()
+        });
+
+        // فتح واتساب لتأكيد الاشتراك عند العميل
         const confirmMsg = encodeURIComponent(
-            `أهلاً بك في AUTO CAR AZAM 🚗\nتم تسجيل رقمك بنجاح!\nهنتواصل معاك فور إضافة أي سيارة جديدة.`
+            `أهلاً بك في AUTO CAR AZAM 🚗\nتم تسجيل رقمي بنجاح للإشعارات!`
         );
         const intlPhone = phone.replace(/^0/, '2');
         window.open(`https://wa.me/${intlPhone}?text=${confirmMsg}`, '_blank');
 
-        /* تسجيل الاشتراك عند المسؤول */
-        const adminMsg = encodeURIComponent(
-            `📲 مشترك جديد في إشعارات السيارات:\nالرقم: ${phone}`
-        );
-        setTimeout(() => {
-            window.open(`https://wa.me/${WA_ADMIN_NUMBER}?text=${adminMsg}`, '_blank');
-        }, 1000);
-
         closeWaModal();
         if (window.showToast) showToast('✅ تم الاشتراك بنجاح! ستصلك إشعارات السيارات الجديدة', 'success');
-    });
+
+    } catch (e) {
+        console.error("Error running Firestore:", e);
+        waNotifError.style.color = '#e74c3c';
+        waNotifError.textContent = '❌ حدث خطأ، تأكد من إعدادات الـ Rules في الفايربيز.';
+    }
+});
+
+/* إرسال إشعار لكل المشتركين عند إضافة سيارة جديدة */
+window.notifyWaSubscribers = async function(carName, carPrice, carYear) {
+    try {
+        const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+        const subs = [];
+        querySnapshot.forEach((doc) => {
+            subs.push(doc.data().phone);
+        });
+
+        if (!subs.length) return;
+
+        const priceStr = carPrice ? carPrice.toLocaleString('en-US') + ' ج.م' : '';
+        const msg = encodeURIComponent(
+            `🚗 سيارة جديدة في AUTO CAR AZAM!\n` +
+            `━━━━━━━━━━━━━━━\n` +
+            `🏷️ ${carName || 'سيارة جديدة'}${carYear ? ' ' + carYear : ''}\n` +
+            `💰 السعر: ${priceStr}\n` +
+            `━━━━━━━━━━━━━━━\n` +
+            `شوف كل التفاصيل والصور على الموقع:\nhttps://auto-car-azam.netlify.app/\n\n` +
+            `للإلغاء الاشتراك: راسلنا بكلمة "إلغاء"`
+        );
+
+        const adminNotif = encodeURIComponent(
+            `📢 سيارة جديدة أُضيفت:\n${carName || ''} ${carYear || ''}\nالسعر: ${priceStr}\n\n` +
+            `عدد المشتركين: ${subs.length}\nالأرقام:\n${subs.join('\n')}\n\n` +
+            `أرسل لهم هذه الرسالة:\n\n` +
+            decodeURIComponent(msg)
+        );
+        window.open(`https://wa.me/${WA_ADMIN_NUMBER}?text=${adminNotif}`, '_blank');
+        
+    } catch (e) {
+        console.error("Error fetching subscribers:", e);
+    }
+};
 
     /* إرسال إشعار لكل المشتركين عند إضافة سيارة جديدة
        يُستدعى من module Firebase بعد addDoc */
