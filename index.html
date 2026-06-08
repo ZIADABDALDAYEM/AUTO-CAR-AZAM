@@ -233,21 +233,21 @@
            PHASE 3 — Badge Builder
            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         ============================================================ */
-       
-
-        /** Returns true if car was added within 7 days */
-        function function getBadgesHTML(car) {
+        function getBadgesHTML(car) {
             const badges = [];
             if (car.status === 'مباع')      badges.push(`<span class="badge badge-sold">🚫 تم البيع</span>`);
             if (car.is_pinned)              badges.push(`<span class="badge badge-pinned">📌 مثبتة</span>`);
             if (car.is_featured)            badges.push(`<span class="badge badge-featured">⭐ مميزة</span>`);
-            if (isNewCar(car))              badges.push(`<span class="badge badge-new">NEW</span>`);
+            if (isNewCar(car))              badges.push(`<span class="badge badge-new">🆕 جديد</span>`);
             if (car.old_price && car.old_price > (car.price || 0))
                 badges.push(`<span class="badge badge-offer">💰 عرض خاص</span>`);
             return badges.length
                 ? `<div class="badges-row">${badges.join('')}</div>`
                 : '';
-        } isNewCar(car) {
+        }
+
+        /** Returns true if car was added within 7 days */
+        function isNewCar(car) {
             if (!car.createdAt) return false;
             const created = car.createdAt.seconds
                 ? car.createdAt.seconds * 1000
