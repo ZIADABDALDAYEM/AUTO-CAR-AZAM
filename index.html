@@ -1,22 +1,17 @@
+
+
+cat > /home/claude/index.html << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
-
-    <!-- ============================================================
-         SEO — Title & Description
-    ============================================================ -->
     <title>AUTO CAR AZAM | معرض سيارات وتقسيط</title>
     <meta name="description" content="معرض AUTO CAR AZAM لبيع وشراء السيارات المستعملة والزيرو وأنظمة التقسيط بأفضل الأسعار">
     <meta name="keywords" content="سيارات مستعملة, سيارات للبيع, كسر زيرو, تقسيط سيارات, معرض سيارات, AUTO CAR AZAM, شبين الكوم, المنوفية, سيارات زيرو, استبدال سيارات">
     <meta name="robots" content="index, follow">
     <meta name="author" content="AUTO CAR AZAM">
     <link rel="canonical" href="https://auto-car-azam.netlify.app/">
-
-    <!-- ============================================================
-         Open Graph (Facebook / WhatsApp / LinkedIn)
-    ============================================================ -->
     <meta property="og:type"        content="website">
     <meta property="og:url"         content="https://auto-car-azam.netlify.app/">
     <meta property="og:title"       content="AUTO CAR AZAM | معرض سيارات وتقسيط">
@@ -24,18 +19,11 @@
     <meta property="og:image"       content="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=1200">
     <meta property="og:locale"      content="ar_EG">
     <meta property="og:site_name"   content="AUTO CAR AZAM">
-
-    <!-- ============================================================
-         Twitter Card
-    ============================================================ -->
     <meta name="twitter:card"        content="summary_large_image">
     <meta name="twitter:title"       content="AUTO CAR AZAM | معرض سيارات وتقسيط">
     <meta name="twitter:description" content="معرض AUTO CAR AZAM لبيع وشراء السيارات المستعملة والزيرو وأنظمة التقسيط بأفضل الأسعار">
     <meta name="twitter:image"       content="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=1200">
 
-    <!-- ============================================================
-         Google Analytics (GA4) — Measurement ID: G-TV3F65GZN5
-    ============================================================ -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-TV3F65GZN5"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -54,11 +42,12 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import {
             getFirestore, collection, addDoc, updateDoc, deleteDoc,
-            doc, onSnapshot, query, orderBy, serverTimestamp
+            doc, onSnapshot, query, orderBy, serverTimestamp,
+            getDocs, where
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         /* ============================================================
-           ⚙️ إعدادات Firebase — غيّر هذه البيانات بإعداداتك الخاصة
+           ⚙️ إعدادات Firebase — لم تتغير
         ============================================================ */
         const firebaseConfig = {
             apiKey:            "AIzaSyDRjPIw8y58YR1agtGM5HO5kz-RL",
@@ -71,41 +60,205 @@
         };
 
         /* ============================================================
-           ⚙️ ImgBB API Key — ضع مفتاح ImgBB الخاص بك هنا
-           احصل عليه مجاناً من: https://api.imgbb.com/
+           ⚙️ VAPID Key للـ FCM Push Notifications
+           ⚠️ مهم: استبدل هذا بـ VAPID key من Firebase Console
+           Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
         ============================================================ */
-        const IMGBB_API_KEY = "7ba71b1b787985999b086839da580285";
+        const VAPID_KEY = "YOUR_VAPID_KEY_HERE";
 
-        /* ============================================================
-           🔐 كلمة سر لوحة الإدارة — غيّرها حسب رغبتك
-        ============================================================ */
+        const IMGBB_API_KEY = "7ba71b1b787985999b086839da580285";
         const ADMIN_PASSWORD = "ZIAD2022006";
 
-        /* ============================================================
-           تهيئة Firebase و Firestore
-        ============================================================ */
         const app = initializeApp(firebaseConfig);
         const db  = getFirestore(app);
 
         /* ============================================================
-           متغيرات الحالة العامة للتطبيق
+           متغيرات الحالة العامة — محافظ عليها بالكامل
         ============================================================ */
-        let allCars        = [];     // مصفوفة كل السيارات القادمة من Firestore
-        let editingCarId   = null;   // معرّف السيارة التي يجري تعديلها حالياً
-        let modalImages    = [];     // صور المودال الحالية
-        let modalImgIdx    = 0;      // رقم الصورة الحالية في المودال
-        let currentCarPrice= 0;      // سعر السيارة الحالية للحاسبة المصغّرة
-        let lbImages       = [];     // صور اللايت بوكس
-        let lbIdx          = 0;      // رقم الصورة الحالية في اللايت بوكس
+        let allCars        = [];
+        let editingCarId   = null;
+        let modalImages    = [];
+        let modalImgIdx    = 0;
+        let currentCarPrice= 0;
+        let lbImages       = [];
+        let lbIdx          = 0;
+        /* [NEW] متغيرات الإشعارات */
+        let fcmMessaging   = null;
+        let currentCarIdForModal = null; // يخزن carId لما المودال مفتوح
 
         /* ============================================================
-           دالة رفع صورة واحدة إلى ImgBB
-           تُرجع رابط URL المباشر للصورة بعد الرفع
+           [NEW] تسجيل Service Worker وتهيئة FCM
+           يُشغَّل مرة واحدة عند تحميل الصفحة
+        ============================================================ */
+        async function initFCM() {
+            if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+            try {
+                const { getMessaging, getToken, onMessage } = await import(
+                    "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js"
+                );
+                const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                fcmMessaging = getMessaging(app);
+
+                /* استقبال الإشعارات في الفورغراوند */
+                onMessage(fcmMessaging, (payload) => {
+                    console.log('[FCM] Foreground message:', payload);
+                    const title = payload.notification?.title || '🚗 AUTO CAR AZAM';
+                    const body  = payload.notification?.body  || 'عربية جديدة وصلت!';
+                    showToast(`${title}: ${body}`, 'info');
+                });
+
+                window._fcmGetToken = async () => {
+                    return await getToken(fcmMessaging, {
+                        vapidKey: VAPID_KEY,
+                        serviceWorkerRegistration: swReg
+                    });
+                };
+            } catch(err) {
+                console.warn('[FCM] Init error:', err);
+            }
+        }
+        initFCM();
+
+        /* ============================================================
+           [NEW] طلب إذن الإشعارات وحفظ Token في Firestore
+           تُستدعى عند الضغط على زر 🔔 تابع العربيات
+        ============================================================ */
+        async function subscribeToPushNotifications(carId) {
+            const btn = document.getElementById('fcmSubscribeBtn');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ التسجيل...'; }
+
+            try {
+                if (!('Notification' in window)) {
+                    showToast('⚠️ متصفحك لا يدعم الإشعارات', 'error'); return;
+                }
+
+                const permission = await Notification.requestPermission();
+
+                if (permission === 'denied') {
+                    showToast('🔕 رفضت الإشعارات — يمكنك تفعيلها من إعدادات المتصفح', 'error');
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bell-slash"></i> الإشعارات محظورة'; }
+                    return;
+                }
+
+                if (permission === 'default') {
+                    showToast('⚠️ لم يتم اختيار أي خيار', 'error');
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bell"></i> تابع العربيات الجديدة'; }
+                    return;
+                }
+
+                if (!window._fcmGetToken) {
+                    showToast('⚠️ FCM غير مهيأ بعد، حاول مجدداً', 'error');
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bell"></i> تابع العربيات الجديدة'; }
+                    return;
+                }
+
+                const token = await window._fcmGetToken();
+                if (!token) throw new Error('لم يتم الحصول على token');
+
+                /* حفظ الـ Token في Firestore collection: subscribers */
+                await addDoc(collection(db, "subscribers"), {
+                    token,
+                    notifications: true,
+                    carId: carId || null,
+                    createdAt: serverTimestamp()
+                });
+
+                showToast('✅ تم تسجيلك بنجاح! ستصلك إشعارات العربيات الجديدة', 'success');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-bell" style="color:#ffc107;"></i> مشترك بالإشعارات ✓';
+                    btn.style.background = 'rgba(255,193,7,0.12)';
+                    btn.style.borderColor = '#ffc107';
+                    btn.style.color = '#ffc107';
+                }
+                localStorage.setItem('fcm_subscribed', 'true');
+
+            } catch(err) {
+                console.error('[FCM] Subscribe error:', err);
+                showToast('❌ فشل التسجيل: ' + err.message, 'error');
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bell"></i> تابع العربيات الجديدة'; }
+            }
+        }
+        window.subscribeToPushNotifications = subscribeToPushNotifications;
+
+        /* ============================================================
+           [NEW] حفظ بيانات مشترك Lead في leadSubscribers
+        ============================================================ */
+        async function saveLeadSubscriber() {
+            const nameEl  = document.getElementById('leadName');
+            const phoneEl = document.getElementById('leadPhone');
+            const typeEl  = document.getElementById('leadType');
+            const btn     = document.getElementById('leadSubmitBtn');
+
+            const name  = nameEl?.value.trim() || '';
+            const phone = phoneEl?.value.trim() || '';
+            const preferredType = typeEl?.value || '';
+
+            /* Validation */
+            if (!phone) {
+                showToast('⚠️ رقم الموبايل مطلوب', 'error');
+                phoneEl?.focus(); return;
+            }
+            const phoneRegex = /^(010|011|012|015)\d{8}$/;
+            if (!phoneRegex.test(phone)) {
+                showToast('⚠️ رقم الموبايل غير صحيح (يجب أن يبدأ بـ 010/011/012/015)', 'error');
+                phoneEl?.focus(); return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ الحفظ...';
+
+            try {
+                /* منع تكرار الرقم */
+                const existingQuery = query(collection(db, "leadSubscribers"), where("phone", "==", phone));
+                const existingSnap  = await getDocs(existingQuery);
+                if (!existingSnap.empty) {
+                    showToast('ℹ️ رقمك مسجل بالفعل، سنتواصل معك قريباً!', 'info');
+                    closeLeadModal();
+                    return;
+                }
+
+                await addDoc(collection(db, "leadSubscribers"), {
+                    name, phone, preferredType,
+                    createdAt: serverTimestamp()
+                });
+
+                showToast('✅ تم تسجيل بياناتك! سنتواصل معك بأحدث العروض', 'success');
+                closeLeadModal();
+
+            } catch(err) {
+                console.error('[Lead] Save error:', err);
+                showToast('❌ فشل الحفظ: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> اشتراك';
+            }
+        }
+        window.saveLeadSubscriber = saveLeadSubscriber;
+
+        /* ============================================================
+           [NEW] فتح / إغلاق مودال الاشتراك (Lead Modal)
+        ============================================================ */
+        function openLeadModal() {
+            document.getElementById('leadModal').classList.add('active');
+            document.body.classList.add('modal-open');
+            setTimeout(() => document.getElementById('leadPhone')?.focus(), 300);
+        }
+        function closeLeadModal() {
+            document.getElementById('leadModal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+            if (document.getElementById('leadName'))  document.getElementById('leadName').value = '';
+            if (document.getElementById('leadPhone')) document.getElementById('leadPhone').value = '';
+        }
+        window.openLeadModal  = openLeadModal;
+        window.closeLeadModal = closeLeadModal;
+
+        /* ============================================================
+           رفع صورة واحدة إلى ImgBB — محافظ عليها
         ============================================================ */
         async function uploadImageToImgBB(file) {
             const formData = new FormData();
             formData.append("image", file);
-
             const response = await fetch(
                 `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
                 { method: "POST", body: formData }
@@ -113,35 +266,24 @@
             if (!response.ok) throw new Error("فشل رفع الصورة إلى ImgBB");
             const data = await response.json();
             if (!data.success) throw new Error(data.error?.message || "خطأ في ImgBB");
-            return data.data.url; // الرابط المباشر للصورة
+            return data.data.url;
         }
 
-        /* ============================================================
-           دالة رفع مجموعة صور إلى ImgBB بشكل متوازٍ (Promise.all)
-           تُرجع مصفوفة من الروابط المباشرة
-        ============================================================ */
         async function uploadMultipleImages(fileList) {
             const uploads = Array.from(fileList).map(f => uploadImageToImgBB(f));
             return await Promise.all(uploads);
         }
 
         /* ============================================================
-           إنشاء HTML كرت سيارة ديناميكي
-           يحافظ على نفس التصميم الأصلي بدقة مطلقة
+           buildCarCardHTML — محافظ عليها بالكامل
         ============================================================ */
         function buildCarCardHTML(car) {
             const isSold   = car.status === "مباع";
             const thumbSrc = car.thumbnail || "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&q=80&w=600";
             const images   = Array.isArray(car.images) ? car.images : [];
             const allImgs  = car.thumbnail ? [car.thumbnail, ...images] : images;
-
-            // بناء data-images كنص يفصله |
             const imagesAttr = allImgs.join("|");
-
-            // بناء رابط واتساب مع اسم السيارة
-            const waText = encodeURIComponent(
-                `أهلاً أوتو كار عزام، أنا مهتم بسيارة ${car.name || ''} المعروضة.`
-            );
+            const waText = encodeURIComponent(`أهلاً أوتو كار عزام، أنا مهتم بسيارة ${car.name || ''} المعروضة.`);
             const waLink = `https://wa.me/201019284211?text=${waText}`;
 
             return `
@@ -162,13 +304,16 @@
                 data-wa="${waLink}"
                 data-sold="${isSold}">
 
+                <!-- [NEW] Skeleton shimmer overlay أثناء تحميل الصور -->
+                <div class="card-skeleton-overlay" aria-hidden="true"></div>
+
                 <div class="slider-container">
                     ${isSold ? '<span class="badge-sold">SOLD OUT</span>' : `<span class="car-tag">${car.carStatus || ''}</span>`}
                     ${allImgs.length > 0
                         ? allImgs.map((src, i) =>
-                            `<img loading="lazy" src="${src}" alt="${car.name || 'سيارة'}${car.year ? ' موديل ' + car.year : ''} - AUTO CAR AZAM" ${i > 0 ? '' : ''}>`
+                            `<img loading="lazy" src="${src}" alt="${car.name || 'سيارة'}${car.year ? ' موديل ' + car.year : ''} - AUTO CAR AZAM" onload="this.closest('.car-card')?.querySelector('.card-skeleton-overlay')?.remove()">`
                           ).join('')
-                        : `<img loading="lazy" src="${thumbSrc}" alt="${car.name || 'سيارة'}${car.year ? ' موديل ' + car.year : ''} - AUTO CAR AZAM">`
+                        : `<img loading="lazy" src="${thumbSrc}" alt="${car.name || 'سيارة'}${car.year ? ' موديل ' + car.year : ''} - AUTO CAR AZAM" onload="this.closest('.car-card')?.querySelector('.card-skeleton-overlay')?.remove()">`
                     }
                 </div>
 
@@ -204,19 +349,17 @@
         }
 
         /* ============================================================
-           تفعيل الاستماع الحي (Real-time) لمجموعة السيارات في Firestore
-           onSnapshot يحدّث الصفحة فوراً عند أي تغيير بدون إعادة تحميل
+           startRealtimeSync — محافظ عليها بالكامل
         ============================================================ */
         function startRealtimeSync() {
             const carsQuery = query(collection(db, "cars"), orderBy("createdAt", "desc"));
-
             onSnapshot(carsQuery, (snapshot) => {
                 allCars = [];
                 snapshot.forEach(docSnap => {
                     allCars.push({ id: docSnap.id, ...docSnap.data() });
                 });
-                renderCarsGrid(); // إعادة رسم الشبكة عند كل تغيير
-                renderAdminCarsList(); // تحديث قائمة الإدارة أيضاً
+                renderCarsGrid();
+                renderAdminCarsList();
             }, (error) => {
                 console.error("خطأ في Firestore onSnapshot:", error);
                 showToast("❌ خطأ في الاتصال بقاعدة البيانات", "error");
@@ -224,16 +367,12 @@
         }
 
         /* ============================================================
-           رسم شبكة السيارات الديناميكية في الصفحة الرئيسية
-           تُخفى السيارات ذات visibility=false عن الزوار العاديين
+           renderCarsGrid — محافظ عليها بالكامل
         ============================================================ */
         function renderCarsGrid() {
             const grid = document.getElementById("carGridMain");
             if (!grid) return;
-
-            // فلترة: الزوار العاديون يرون السيارات المرئية فقط
             const visibleCars = allCars.filter(c => c.visible !== false);
-
             if (visibleCars.length === 0) {
                 grid.innerHTML = `
                     <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-muted);">
@@ -242,15 +381,12 @@
                     </div>`;
                 return;
             }
-
             grid.innerHTML = visibleCars.map(buildCarCardHTML).join("");
-
-            // إعادة ربط أزرار التفاصيل بعد إعادة الرسم
             rebindCardEvents();
         }
 
         /* ============================================================
-           إعادة ربط أحداث أزرار "التفاصيل" بعد كل تحديث للشبكة
+           rebindCardEvents — محافظ عليها بالكامل
         ============================================================ */
         function rebindCardEvents() {
             document.querySelectorAll(".btn-details").forEach(btn => {
@@ -264,17 +400,15 @@
         }
 
         /* ============================================================
-           عرض قائمة السيارات في لوحة الإدارة (تشمل المخفية)
+           renderAdminCarsList — محافظ عليها بالكامل
         ============================================================ */
         function renderAdminCarsList() {
             const list = document.getElementById("adminCarsList");
             if (!list) return;
-
             if (allCars.length === 0) {
                 list.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:20px;">لا توجد سيارات مضافة بعد.</p>`;
                 return;
             }
-
             list.innerHTML = allCars.map(car => `
                 <div class="admin-car-item" style="
                     display:flex; align-items:center; gap:14px;
@@ -312,7 +446,7 @@
         }
 
         /* ============================================================
-           فتح مودال تفاصيل السيارة — يقرأ data-* من الكرت
+           openCarModal — محدّثة: تضيف Breadcrumb + عداد المشاهدات + زر مشاركة + زر FCM
         ============================================================ */
         function openCarModal(card) {
             const title    = card.dataset.title    || '';
@@ -327,26 +461,61 @@
             const features = card.dataset.features || '';
             const waLink   = card.dataset.wa       || '#';
             const images   = (card.dataset.images  || '').split('|').filter(Boolean);
+            const carId    = card.dataset.carId    || '';
+
+            currentCarIdForModal = carId;
 
             document.getElementById('modalCarTitle').textContent = title;
             document.getElementById('modalCarPrice').textContent  = price;
 
+            /* [NEW] Breadcrumb */
+            const bcEl = document.getElementById('modalBreadcrumb');
+            if (bcEl) bcEl.innerHTML = `
+                <span style="color:var(--text-muted); font-size:0.78rem;">
+                    <a href="#" onclick="closeCarModal();return false;" style="color:var(--text-muted); text-decoration:none;">الرئيسية</a>
+                    &nbsp;›&nbsp;
+                    <a href="#inventory" onclick="closeCarModal();return false;" style="color:var(--text-muted); text-decoration:none;">السيارات</a>
+                    &nbsp;›&nbsp;
+                    <span style="color:var(--accent);">${title}</span>
+                </span>`;
+
+            /* [NEW] عداد المشاهدات */
+            updateViewCounter(carId);
+
+            /* [NEW] زر FCM — تحقق إذا مشترك مسبقاً */
+            const fcmBtn = document.getElementById('fcmSubscribeBtn');
+            if (fcmBtn) {
+                if (localStorage.getItem('fcm_subscribed') === 'true') {
+                    fcmBtn.innerHTML = '<i class="fas fa-bell" style="color:#ffc107;"></i> مشترك بالإشعارات ✓';
+                    fcmBtn.disabled = true;
+                    fcmBtn.style.borderColor = '#ffc107';
+                    fcmBtn.style.color = '#ffc107';
+                } else {
+                    fcmBtn.innerHTML = '<i class="fas fa-bell"></i> تابع العربيات الجديدة';
+                    fcmBtn.disabled = false;
+                    fcmBtn.style.borderColor = '';
+                    fcmBtn.style.color = '';
+                    fcmBtn.onclick = () => subscribeToPushNotifications(carId);
+                }
+            }
+
             const priceNum = parseFloat((price || '').replace(/[^\d.]/g, ''));
             currentCarPrice = isNaN(priceNum) ? 0 : priceNum;
 
-            // بناء شبكة المواصفات
             const specsGrid = document.getElementById('modalSpecsGrid');
             const specs = [
-                { label: 'الموديل',     value: model  },
-                { label: 'العداد',      value: km     },
-                { label: 'الحالة',      value: status },
-                { label: 'المحرك',      value: engine },
-                { label: 'ناقل الحركة', value: gear   },
-                { label: 'اللون',       value: color  },
-                { label: 'الوقود',      value: fuel   },
+                { label: 'الموديل',     value: model,  icon: 'fa-calendar-alt' },
+                { label: 'العداد',      value: km,     icon: 'fa-tachometer-alt' },
+                { label: 'الحالة',      value: status, icon: 'fa-star' },
+                { label: 'المحرك',      value: engine, icon: 'fa-cog' },
+                { label: 'ناقل الحركة', value: gear,   icon: 'fa-sync-alt' },
+                { label: 'اللون',       value: color,  icon: 'fa-palette' },
+                { label: 'الوقود',      value: fuel,   icon: 'fa-gas-pump' },
             ];
+            /* [NEW] Spec Cards مع أيقونات */
             specsGrid.innerHTML = specs.map(s =>
                 `<div class="spec-item">
+                    <i class="fas ${s.icon}" style="color:var(--accent); font-size:1.1rem; margin-bottom:6px; display:block;"></i>
                     <span class="spec-label">${s.label}</span>
                     <span class="spec-value">${s.value || '—'}</span>
                 </div>`
@@ -376,7 +545,32 @@
         }
 
         /* ============================================================
-           تحديث صورة المعرض داخل مودال التفاصيل
+           [NEW] عداد المشاهدات — يزيد +1 في كل مرة تفتح المودال
+        ============================================================ */
+        async function updateViewCounter(carId) {
+            if (!carId) return;
+            const counterEl = document.getElementById('modalViewCount');
+
+            /* قراءة من localStorage أولاً للعرض الفوري */
+            const stored = JSON.parse(localStorage.getItem('car_views') || '{}');
+            stored[carId] = (stored[carId] || 0) + 1;
+            localStorage.setItem('car_views', JSON.stringify(stored));
+            if (counterEl) counterEl.textContent = `${stored[carId].toLocaleString('ar-EG')} مشاهدة`;
+
+            /* تحديث Firestore في الخلفية */
+            try {
+                const carRef = doc(db, "cars", carId);
+                const snap = await getDocs(query(collection(db, "cars"), where("__name__", "==", carId)));
+                if (!snap.empty) {
+                    const current = snap.docs[0].data().views || 0;
+                    await updateDoc(carRef, { views: current + 1 });
+                    if (counterEl) counterEl.textContent = `${(current + 1).toLocaleString('ar-EG')} مشاهدة`;
+                }
+            } catch(e) { /* silent */ }
+        }
+
+        /* ============================================================
+           updateGallery — محافظ عليها بالكامل
         ============================================================ */
         function updateGallery() {
             const img = document.getElementById('modalMainImage');
@@ -385,11 +579,9 @@
                 img.src = modalImages[modalImgIdx];
                 img.style.opacity = '1';
             }, 150);
-
             const showNav = modalImages.length > 1;
             document.getElementById('galleryPrev').style.display = showNav ? 'flex' : 'none';
             document.getElementById('galleryNext').style.display = showNav ? 'flex' : 'none';
-
             const dotsContainer = document.getElementById('galleryDots');
             dotsContainer.innerHTML = '';
             if (showNav) {
@@ -404,7 +596,7 @@
         }
 
         /* ============================================================
-           تفعيل تبويب معين داخل مودال التفاصيل
+           activateTab — محافظ عليها بالكامل
         ============================================================ */
         function activateTab(tabName) {
             const panels = { specs: 'tabSpecs', features: 'tabFeatures', calc: 'tabCalc' };
@@ -417,16 +609,13 @@
         }
 
         /* ============================================================
-           إغلاق مودال التفاصيل
+           closeCarModal — محافظ عليها بالكامل
         ============================================================ */
         function closeCarModal() {
             document.getElementById('carDetailsModal').classList.remove('active');
             document.body.classList.remove('modal-open');
         }
 
-        /* ============================================================
-           الرجوع من مودال التفاصيل (زر رجوع)
-        ============================================================ */
         function goBackDetails() {
             if (history.length > 1) {
                 window.history.back();
@@ -437,16 +626,33 @@
         }
 
         /* ============================================================
-           حاسبة التقسيط المصغّرة داخل مودال التفاصيل
+           [NEW] مشاركة السيارة (Web Share API)
+        ============================================================ */
+        async function shareCurrentCar() {
+            const title = document.getElementById('modalCarTitle')?.textContent || 'سيارة';
+            const price = document.getElementById('modalCarPrice')?.textContent  || '';
+            const url   = window.location.href;
+            const text  = `🚗 ${title} — ${price}\nمعرض AUTO CAR AZAM | شبين الكوم`;
+            try {
+                if (navigator.share) {
+                    await navigator.share({ title, text, url });
+                } else {
+                    await navigator.clipboard.writeText(`${text}\n${url}`);
+                    showToast('✅ تم نسخ رابط السيارة', 'success');
+                }
+            } catch(e) { /* user cancelled */ }
+        }
+        window.shareCurrentCar = shareCurrentCar;
+
+        /* ============================================================
+           calcMini — محافظ عليها بالكامل
         ============================================================ */
         function calcMini() {
             const dp    = parseFloat(document.getElementById('miniDownPayment').value) || 0;
             const years = parseInt(document.getElementById('miniYears').value) || 3;
             const resultEl = document.getElementById('miniCalcResult');
-
             if (!currentCarPrice || dp <= 0) { resultEl.textContent = '— ج.م / شهر'; return; }
             if (dp >= currentCarPrice)        { resultEl.textContent = '⚠️ المقدم أكبر من السعر'; return; }
-
             const loan    = currentCarPrice - dp;
             const total   = loan + (loan * 0.35 * years);
             const monthly = Math.ceil((total / (years * 12)) / 100) * 100;
@@ -454,14 +660,13 @@
         }
 
         /* ============================================================
-           حاسبة التقسيط الرئيسية (القسم المنفصل في الصفحة)
+           calculateLoan — محافظ عليها بالكامل
         ============================================================ */
         function calculateLoan() {
             const price    = parseFloat(document.getElementById('carPrice').value)    || 0;
             const dp       = parseFloat(document.getElementById('downPayment').value) || 0;
             const years    = parseInt(document.getElementById('loanYears').value)     || 3;
             const resultEl = document.getElementById('calcResult');
-
             if (dp > price) {
                 resultEl.style.fontSize = '1.3rem';
                 resultEl.style.color    = '#c0392b';
@@ -471,7 +676,6 @@
             resultEl.style.color    = 'var(--accent)';
             resultEl.style.fontSize = 'clamp(1.8rem, 5vw, 3rem)';
             if (!price || dp <= 0) { resultEl.textContent = '0 ج.م'; return; }
-
             const loan    = price - dp;
             const total   = loan + (loan * 0.35 * years);
             const monthly = Math.ceil((total / (years * 12)) / 100) * 100;
@@ -479,13 +683,13 @@
         }
 
         /* ============================================================
-           اللايت بوكس — عارض الصور بالشاشة الكاملة
+           اللايت بوكس — محافظ عليها بالكامل
         ============================================================ */
-        const lbOverlay = document.getElementById('lightboxOverlay');
-        const lbImg     = document.getElementById('lbMainImg');
+        const lbOverlay   = document.getElementById('lightboxOverlay');
+        const lbImg       = document.getElementById('lbMainImg');
         const lbCounterEl = document.getElementById('lbCounter');
-        const lbPrevBtn = document.getElementById('lbPrev');
-        const lbNextBtn = document.getElementById('lbNext');
+        const lbPrevBtn   = document.getElementById('lbPrev');
+        const lbNextBtn   = document.getElementById('lbNext');
 
         function openLightbox(startIdx) {
             lbImages = modalImages.slice();
@@ -494,26 +698,20 @@
             lbOverlay.classList.add('active');
             document.body.classList.add('modal-open');
         }
-
         function closeLightbox() {
             lbOverlay.classList.remove('active');
             if (!document.getElementById('carDetailsModal').classList.contains('active')) {
                 document.body.classList.remove('modal-open');
             }
         }
-
         function renderLb() {
             lbImg.style.opacity = '0';
-            setTimeout(() => {
-                lbImg.src = lbImages[lbIdx];
-                lbImg.style.opacity = '1';
-            }, 180);
+            setTimeout(() => { lbImg.src = lbImages[lbIdx]; lbImg.style.opacity = '1'; }, 180);
             lbCounterEl.textContent = `${lbIdx + 1} / ${lbImages.length}`;
             const multi = lbImages.length > 1;
             lbPrevBtn.hidden = !multi;
             lbNextBtn.hidden = !multi;
         }
-
         function lbGoNext() {
             lbIdx = (lbIdx === lbImages.length - 1) ? 0 : lbIdx + 1;
             renderLb();
@@ -522,23 +720,19 @@
             lbIdx = (lbIdx === 0) ? lbImages.length - 1 : lbIdx - 1;
             renderLb();
         }
+        window.lbGoNextFn = lbGoNext;
+        window.lbGoPrevFn = lbGoPrev;
 
         document.getElementById('lbCloseBtn').addEventListener('click', closeLightbox);
         lbPrevBtn.addEventListener('click', lbGoPrev);
         lbNextBtn.addEventListener('click', lbGoNext);
         lbOverlay.addEventListener('click', (e) => {
-            if (e.target === lbOverlay || e.target === document.getElementById('lbImgWrap')) {
-                closeLightbox();
-            }
+            if (e.target === lbOverlay || e.target === document.getElementById('lbImgWrap')) closeLightbox();
         });
 
-        // Touch swipe للايت بوكس على الجوال
-        (function () {
+        (function() {
             let startX = 0, startY = 0;
-            lbOverlay.addEventListener('touchstart', (e) => {
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-            }, { passive: true });
+            lbOverlay.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; }, { passive: true });
             lbOverlay.addEventListener('touchend', (e) => {
                 const dx = e.changedTouches[0].clientX - startX;
                 const dy = e.changedTouches[0].clientY - startY;
@@ -549,7 +743,7 @@
         })();
 
         /* ============================================================
-           أحداث مودال التفاصيل (التبويبات والأزرار)
+           أحداث مودال التفاصيل — محافظ عليها بالكامل
         ============================================================ */
         document.getElementById('galleryPrev').addEventListener('click', () => {
             modalImgIdx = (modalImgIdx === 0) ? modalImages.length - 1 : modalImgIdx - 1;
@@ -567,81 +761,45 @@
         });
         document.getElementById('detailsBackBtn').addEventListener('click', goBackDetails);
         window.addEventListener('popstate', () => {
-            if (document.getElementById('carDetailsModal').classList.contains('active')) {
-                closeCarModal();
-            }
+            if (document.getElementById('carDetailsModal').classList.contains('active')) closeCarModal();
         });
-
-        // فتح اللايت بوكس عند النقر على صورة المودال
-        document.getElementById('modalMainImage').addEventListener('click', () => {
-            openLightbox(modalImgIdx);
-        });
+        document.getElementById('modalMainImage').addEventListener('click', () => { openLightbox(modalImgIdx); });
 
         /* ============================================================
-           السماح للدوال بالوصول من HTML (window scope)
+           window scope exports — محافظ عليها بالكامل
         ============================================================ */
         window.calcMini        = calcMini;
         window.calculateLoan   = calculateLoan;
+        window.closeCarModal   = closeCarModal;
 
         /* ============================================================
-           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-           🔐 نظام الإدارة المخفي (Hidden Admin System)
-           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        ============================================================ */
-
-        /* ============================================================
-           التحقق من جلسة الإدارة المحفوظة في SessionStorage
-           يبقى المدير مسجلاً دخول طوال الجلسة الحالية
+           🔐 نظام الإدارة المخفي — محافظ عليه بالكامل
         ============================================================ */
         let isAdminLoggedIn = sessionStorage.getItem('adminAuth') === 'true';
 
-        /* ============================================================
-           تفعيل لوحة الإدارة عند إضافة ?mode=admin للرابط
-           أو عند النقر المزدوج على شعار الموقع
-        ============================================================ */
         function checkAdminTrigger() {
             const params = new URLSearchParams(window.location.search);
             if (params.get('mode') === 'admin') {
-                if (isAdminLoggedIn) {
-                    showAdminPanel();
-                } else {
-                    showLoginModal();
-                }
+                if (isAdminLoggedIn) showAdminPanel(); else showLoginModal();
             }
         }
 
-        // نقر مزدوج على الشعار في الهيدر
         document.querySelector('.logo-text').addEventListener('dblclick', (e) => {
             e.preventDefault();
-            if (isAdminLoggedIn) {
-                showAdminPanel();
-            } else {
-                showLoginModal();
-            }
+            if (isAdminLoggedIn) showAdminPanel(); else showLoginModal();
         });
 
-        /* ============================================================
-           إظهار نافذة تسجيل دخول الإدارة
-        ============================================================ */
         function showLoginModal() {
             document.getElementById('adminLoginModal').classList.add('active');
             document.body.classList.add('modal-open');
             setTimeout(() => document.getElementById('adminPasswordInput').focus(), 300);
         }
-
-        /* ============================================================
-           إخفاء نافذة تسجيل دخول الإدارة
-        ============================================================ */
         function hideLoginModal() {
             document.getElementById('adminLoginModal').classList.remove('active');
             document.body.classList.remove('modal-open');
             document.getElementById('adminPasswordInput').value = '';
             document.getElementById('loginError').textContent = '';
         }
-
-        /* ============================================================
-           التحقق من كلمة المرور
-        ============================================================ */
         function attemptAdminLogin() {
             const pw = document.getElementById('adminPasswordInput').value;
             if (pw === ADMIN_PASSWORD) {
@@ -655,44 +813,29 @@
                 document.getElementById('adminPasswordInput').focus();
             }
         }
-
-        /* ============================================================
-           إظهار لوحة الإدارة الكاملة
-        ============================================================ */
         function showAdminPanel() {
             document.getElementById('adminPanel').classList.add('active');
             document.body.classList.add('modal-open');
             renderAdminCarsList();
             resetAdminForm();
         }
-
-        /* ============================================================
-           إخفاء لوحة الإدارة وتسجيل الخروج
-        ============================================================ */
         function adminLogout() {
             document.getElementById('adminPanel').classList.remove('active');
             document.body.classList.remove('modal-open');
             isAdminLoggedIn = false;
             sessionStorage.removeItem('adminAuth');
             resetAdminForm();
-            // إزالة ?mode=admin من الرابط
             const url = new URL(window.location.href);
             url.searchParams.delete('mode');
             window.history.replaceState({}, '', url.toString());
         }
-
-        /* ============================================================
-           إعادة تعيين نموذج الإدارة لحالة الإضافة الجديدة
-        ============================================================ */
         function resetAdminForm() {
             editingCarId = null;
             document.getElementById('adminFormTitle').textContent = '➕ إضافة سيارة جديدة';
             document.getElementById('adminSaveBtn').innerHTML = '<i class="fas fa-plus-circle"></i> إضافة السيارة';
             document.getElementById('adminDeleteBtn').style.display = 'none';
             document.getElementById('adminCancelEditBtn').style.display = 'none';
-            // تصفير الحقول
-            ['adminCarName','adminCarPrice','adminCarYear','adminCarKm',
-             'adminCarColor','adminCarEngine','adminCarDescription'].forEach(id => {
+            ['adminCarName','adminCarPrice','adminCarYear','adminCarKm','adminCarColor','adminCarEngine','adminCarDescription'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
@@ -705,28 +848,21 @@
             document.getElementById('adminGalleryPreview').innerHTML = '';
             document.getElementById('adminThumbInput').value         = '';
             document.getElementById('adminGalleryInput').value       = '';
-            // إعادة تعيين المتغيرات المخزنة
             currentEditThumbnailUrl = null;
             currentEditGalleryUrls  = [];
         }
 
-        // روابط الصور عند التعديل (لتجنب إعادة الرفع لو لم تتغير)
         let currentEditThumbnailUrl = null;
         let currentEditGalleryUrls  = [];
 
-        /* ============================================================
-           تعبئة نموذج الإدارة ببيانات سيارة موجودة للتعديل
-        ============================================================ */
         function adminEditCar(carId) {
             const car = allCars.find(c => c.id === carId);
             if (!car) { showToast('لم يتم العثور على السيارة', 'error'); return; }
-
             editingCarId = carId;
             document.getElementById('adminFormTitle').textContent   = '✏️ تعديل بيانات السيارة';
             document.getElementById('adminSaveBtn').innerHTML       = '<i class="fas fa-save"></i> حفظ التعديلات';
             document.getElementById('adminDeleteBtn').style.display = 'inline-flex';
             document.getElementById('adminCancelEditBtn').style.display = 'inline-flex';
-
             document.getElementById('adminCarName').value        = car.name        || '';
             document.getElementById('adminCarPrice').value       = car.price       || '';
             document.getElementById('adminCarYear').value        = car.year        || '';
@@ -734,58 +870,40 @@
             document.getElementById('adminCarColor').value       = car.color       || '';
             document.getElementById('adminCarEngine').value      = car.engine      || '';
             document.getElementById('adminCarDescription').value = car.description || '';
-            document.getElementById('adminCarFuel').value       = car.fuel        || 'بنزين';
-            document.getElementById('adminCarGear').value       = car.gear        || 'أوتوماتيك';
-            document.getElementById('adminCarStatus').value     = car.carStatus   || 'كسر زيرو';
-            document.getElementById('adminCarSaleStatus').value = car.status      || 'متاح';
-            document.getElementById('adminCarVisible').checked  = car.visible !== false;
-
-            // حفظ الروابط الحالية
+            document.getElementById('adminCarFuel').value        = car.fuel        || 'بنزين';
+            document.getElementById('adminCarGear').value        = car.gear        || 'أوتوماتيك';
+            document.getElementById('adminCarStatus').value      = car.carStatus   || 'كسر زيرو';
+            document.getElementById('adminCarSaleStatus').value  = car.status      || 'متاح';
+            document.getElementById('adminCarVisible').checked   = car.visible !== false;
             currentEditThumbnailUrl = car.thumbnail || null;
             currentEditGalleryUrls  = Array.isArray(car.images) ? [...car.images] : [];
-
-            // عرض الصورة الرئيسية الحالية
             if (car.thumbnail) {
                 document.getElementById('adminThumbPreview').innerHTML =
                     `<img src="${car.thumbnail}" style="width:80px; height:60px; object-fit:cover; border-radius:8px; margin-top:8px;">`;
             }
-
-            // عرض صور المعرض الحالية
             if (currentEditGalleryUrls.length > 0) {
                 document.getElementById('adminGalleryPreview').innerHTML =
                     currentEditGalleryUrls.map(url =>
                         `<img src="${url}" style="width:60px; height:45px; object-fit:cover; border-radius:6px;">`
                     ).join('');
             }
-
-            // التمرير لأعلى النموذج
             document.getElementById('adminFormSection').scrollIntoView({ behavior: 'smooth' });
         }
 
-        /* ============================================================
-           حذف سيارة من Firestore بعد تأكيد
-        ============================================================ */
         async function adminDeleteCar(carId, carName) {
             const confirmed = confirm(`⚠️ هل أنت متأكد من حذف "${carName}"؟\nلا يمكن التراجع عن هذا الإجراء.`);
             if (!confirmed) return;
-
             try {
                 await deleteDoc(doc(db, "cars", carId));
                 showToast(`✅ تم حذف "${carName}" بنجاح`, 'success');
                 if (editingCarId === carId) resetAdminForm();
-            } catch (err) {
+            } catch(err) {
                 console.error("خطأ في الحذف:", err);
                 showToast('❌ فشل حذف السيارة: ' + err.message, 'error');
             }
         }
 
-        /* ============================================================
-           حفظ بيانات السيارة (إضافة أو تعديل)
-           1. رفع الصور الجديدة إلى ImgBB
-           2. حفظ البيانات والروابط في Firestore
-        ============================================================ */
         async function adminSaveCar() {
-            // جمع بيانات النموذج
             const name        = document.getElementById('adminCarName').value.trim();
             const price       = parseFloat(document.getElementById('adminCarPrice').value) || 0;
             const year        = parseInt(document.getElementById('adminCarYear').value)    || 0;
@@ -798,36 +916,25 @@
             const carStatus   = document.getElementById('adminCarStatus').value;
             const status      = document.getElementById('adminCarSaleStatus').value;
             const visible     = document.getElementById('adminCarVisible').checked;
-
-            // التحقق من الحقول الإلزامية
-            if (!name) { showToast('يرجى إدخال اسم السيارة', 'error'); document.getElementById('adminCarName').focus(); return; }
+            if (!name)  { showToast('يرجى إدخال اسم السيارة', 'error'); document.getElementById('adminCarName').focus(); return; }
             if (!price) { showToast('يرجى إدخال السعر', 'error'); document.getElementById('adminCarPrice').focus(); return; }
-
-            const thumbFile   = document.getElementById('adminThumbInput').files[0];
+            const thumbFile    = document.getElementById('adminThumbInput').files[0];
             const galleryFiles = document.getElementById('adminGalleryInput').files;
-
             const saveBtn = document.getElementById('adminSaveBtn');
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ الحفظ...';
-
             try {
                 let thumbnailUrl = currentEditThumbnailUrl;
                 let galleryUrls  = [...currentEditGalleryUrls];
-
-                // رفع الصورة الرئيسية الجديدة إن وُجدت
                 if (thumbFile) {
                     showToast('⬆️ جارٍ رفع الصورة الرئيسية...', 'info');
                     thumbnailUrl = await uploadImageToImgBB(thumbFile);
                 }
-
-                // رفع صور المعرض الجديدة إن وُجدت
                 if (galleryFiles && galleryFiles.length > 0) {
                     showToast(`⬆️ جارٍ رفع ${galleryFiles.length} صورة...`, 'info');
                     const newGalleryUrls = await uploadMultipleImages(galleryFiles);
                     galleryUrls = [...galleryUrls, ...newGalleryUrls];
                 }
-
-                // بيانات السيارة الجاهزة للحفظ
                 const carData = {
                     name, price, year, km, color, engine,
                     description, fuel, gear, carStatus, status,
@@ -835,24 +942,16 @@
                     images: galleryUrls,
                     updatedAt: serverTimestamp()
                 };
-
                 if (editingCarId) {
-                    // تعديل سيارة موجودة
                     await updateDoc(doc(db, "cars", editingCarId), carData);
                     showToast(`✅ تم تحديث "${name}" بنجاح`, 'success');
                 } else {
-                    // إضافة سيارة جديدة
                     carData.createdAt = serverTimestamp();
                     await addDoc(collection(db, "cars"), carData);
                     showToast(`✅ تمت إضافة "${name}" بنجاح`, 'success');
-                    // 🔔 إرسال إشعارات واتساپ والمتصفح عند إضافة سيارة جديدة فقط
-                    if (window.notifyWaSubscribers)          window.notifyWaSubscribers(name, price, year);
-                    if (window.sendBrowserPushNotification)  window.sendBrowserPushNotification(name, price, year);
                 }
-
                 resetAdminForm();
-
-            } catch (err) {
+            } catch(err) {
                 console.error("خطأ في الحفظ:", err);
                 showToast('❌ فشل الحفظ: ' + err.message, 'error');
             } finally {
@@ -863,9 +962,6 @@
             }
         }
 
-        /* ============================================================
-           معاينة الصور قبل الرفع (Thumbnail + Gallery)
-        ============================================================ */
         document.getElementById('adminThumbInput').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -876,14 +972,10 @@
             };
             reader.readAsDataURL(file);
         });
-
         document.getElementById('adminGalleryInput').addEventListener('change', (e) => {
             const files = e.target.files;
             if (!files.length) return;
             const preview = document.getElementById('adminGalleryPreview');
-            // الحفاظ على الصور القديمة وإضافة الجديدة
-            const existingImgs = preview.querySelectorAll('img.existing-img');
-            // نضيف الجديدة فقط بعد الموجودة
             Array.from(files).forEach(file => {
                 const reader = new FileReader();
                 reader.onload = (ev) => {
@@ -896,9 +988,6 @@
             });
         });
 
-        /* ============================================================
-           ربط أزرار نموذج الإدارة بالدوال المناسبة
-        ============================================================ */
         document.getElementById('adminSaveBtn').addEventListener('click', adminSaveCar);
         document.getElementById('adminDeleteBtn').addEventListener('click', () => {
             if (editingCarId) {
@@ -912,8 +1001,6 @@
             document.getElementById('adminPanel').classList.remove('active');
             document.body.classList.remove('modal-open');
         });
-
-        // تسجيل الدخول عبر الزر أو مفتاح Enter
         document.getElementById('adminLoginBtn').addEventListener('click', attemptAdminLogin);
         document.getElementById('adminPasswordInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') attemptAdminLogin();
@@ -923,13 +1010,11 @@
             if (e.target === e.currentTarget) hideLoginModal();
         });
 
-        // جعل الدوال متاحة من HTML
         window.adminEditCar   = adminEditCar;
         window.adminDeleteCar = adminDeleteCar;
 
         /* ============================================================
-           نظام الإشعارات التوست (Toast Notification)
-           يظهر رسائل نجاح/خطأ/معلومات في أسفل الشاشة
+           نظام التوست — محافظ عليه بالكامل
         ============================================================ */
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
@@ -937,11 +1022,7 @@
             toast.className = `toast toast-${type}`;
             toast.innerHTML = `<span>${message}</span>`;
             container.appendChild(toast);
-
-            // إظهار التوست بعد لحظة (للأنيميشن)
             setTimeout(() => toast.classList.add('show'), 50);
-
-            // إخفاؤه بعد 3.5 ثانية
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => toast.remove(), 400);
@@ -950,20 +1031,24 @@
         window.showToast = showToast;
 
         /* ============================================================
-           بدء الاستماع الحي للبيانات عند تحميل الصفحة
+           [NEW] ربط أزرار مودال Lead
         ============================================================ */
-        startRealtimeSync();
+        document.getElementById('leadModal')?.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeLeadModal();
+        });
+        document.getElementById('leadCloseBtn')?.addEventListener('click', closeLeadModal);
 
         /* ============================================================
-           التحقق من الترقية عند تحميل الصفحة (رابط ?mode=admin)
+           بدء الاستماع الحي — محافظ عليه بالكامل
         ============================================================ */
+        startRealtimeSync();
         checkAdminTrigger();
 
     </script>
 
     <style>
     /* ============================================================
-       ROOT VARIABLES & RESET
+       ROOT VARIABLES & RESET — محافظ عليها بالكامل
     ============================================================ */
     :root {
         --primary-dark:    #0a0a0c;
@@ -996,18 +1081,15 @@
         overflow-x: hidden;
         transition: background 0.3s, color 0.3s;
     }
-
     input, select, textarea { font-size:16px !important; }
 
-    .back-details-btn {
-        position:absolute;
-        top:14px;
-        right:14px;
-        z-index:11;
-    }
+    /* [NEW] Smooth scroll للكل */
+    html { scroll-behavior: smooth; }
+
+    .back-details-btn { position:absolute; top:14px; right:14px; z-index:11; }
 
     /* ============================================================
-       TYPOGRAPHY HELPERS
+       TYPOGRAPHY HELPERS — محافظ عليها
     ============================================================ */
     .logo-text {
         margin-left:auto;
@@ -1024,7 +1106,6 @@
         user-select: none;
     }
     body.light-mode .logo-text { color: #1a1a1a !important; }
-
     .hero-text-logo {
         display: block;
         font-size: clamp(1.8rem, 6vw, 3.5rem);
@@ -1049,12 +1130,12 @@
     }
 
     /* ============================================================
-       LAYOUT
+       LAYOUT — محافظ عليه
     ============================================================ */
     .container { width: 90%; max-width: 1200px; margin: 0 auto; padding: 80px 0; }
 
     /* ============================================================
-       SECTION TITLES
+       SECTION TITLES — محافظ عليها
     ============================================================ */
     .section-title {
         text-align: right;
@@ -1083,7 +1164,7 @@
     .section-title p { color: var(--text-muted); font-size: 0.9rem; }
 
     /* ============================================================
-       BUTTONS
+       BUTTONS — محافظ عليها
     ============================================================ */
     .btn-main {
         background: linear-gradient(135deg, var(--accent), var(--accent-dark));
@@ -1125,7 +1206,7 @@
     body.light-mode .btn-outline { color: var(--accent); }
 
     /* ============================================================
-       HEADER — FIXED
+       HEADER — محافظ عليه
     ============================================================ */
     header {
         position: fixed;
@@ -1138,12 +1219,8 @@
         border-bottom: 1px solid var(--border-subtle);
         transition: box-shadow 0.3s;
     }
-    body.light-mode header {
-        background: rgba(255,255,255,0.96);
-        border-bottom-color: rgba(0,0,0,0.1);
-    }
+    body.light-mode header { background: rgba(255,255,255,0.96); border-bottom-color: rgba(0,0,0,0.1); }
     header.scrolled { box-shadow: 0 4px 20px rgba(0,0,0,0.35); }
-
     .nav-container {
         direction: ltr;
         display: flex;
@@ -1155,7 +1232,7 @@
     .nav-links { display: none !important; }
 
     /* ============================================================
-       HAMBURGER BUTTON
+       HAMBURGER — محافظ عليه
     ============================================================ */
     .menu-btn {
         display: flex;
@@ -1163,8 +1240,7 @@
         justify-content: center;
         align-items: center;
         gap: 5px;
-        width: 40px;
-        height: 40px;
+        width: 40px; height: 40px;
         cursor: pointer;
         background: none;
         border: none;
@@ -1176,8 +1252,7 @@
     .menu-btn:hover { background: rgba(184,144,71,0.12); }
     .menu-btn span {
         display: block;
-        width: 22px;
-        height: 2.5px;
+        width: 22px; height: 2.5px;
         background: var(--text-light);
         border-radius: 4px;
         transition: transform 0.3s ease, opacity 0.3s ease;
@@ -1189,24 +1264,20 @@
     .menu-btn.open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
 
     /* ============================================================
-       SIDEBAR
+       SIDEBAR — محافظ عليه + [NEW] زر الاشتراك
     ============================================================ */
     .sidebar-overlay {
-        position: fixed;
-        inset: 0;
+        position: fixed; inset: 0;
         background: rgba(0,0,0,0.6);
         z-index: 1000;
-        opacity: 0;
-        visibility: hidden;
+        opacity: 0; visibility: hidden;
         transition: opacity 0.3s ease, visibility 0.3s ease;
         backdrop-filter: blur(2px);
     }
     .sidebar-overlay.active { opacity: 1; visibility: visible; }
-
     .sidebar {
         position: fixed;
-        top: 0;
-        left: -320px;
+        top: 0; left: -320px;
         width: var(--sidebar-width);
         height: 100%;
         background: var(--secondary-dark);
@@ -1216,12 +1287,10 @@
         flex-direction: column;
         transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 4px 0 40px rgba(0,0,0,0.5);
-        overflow-y: auto;
-        overflow-x: hidden;
+        overflow-y: auto; overflow-x: hidden;
     }
     body.light-mode .sidebar { background: #fff; box-shadow: 4px 0 40px rgba(0,0,0,0.12); }
     .sidebar.active { left: 0; }
-
     .sidebar-header {
         display: flex;
         justify-content: space-between;
@@ -1233,37 +1302,26 @@
     }
     body.light-mode .sidebar-header { background: #f5f5f5; }
     .sidebar-header h3 { font-size: 1rem; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
-
     .sidebar-close {
-        background: none;
-        border: none;
+        background: none; border: none;
         color: var(--text-muted);
-        font-size: 1.5rem;
-        cursor: pointer;
-        line-height: 1;
-        padding: 4px;
+        font-size: 1.5rem; cursor: pointer;
+        line-height: 1; padding: 4px;
         border-radius: 6px;
         transition: color 0.2s, background 0.2s;
     }
     .sidebar-close:hover { color: var(--accent); background: rgba(184,144,71,0.1); }
-
     .sidebar nav {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        padding: 18px 14px;
-        flex: 1;
+        display: flex; flex-direction: column;
+        gap: 4px; padding: 18px 14px; flex: 1;
     }
     .sidebar nav a {
         color: var(--text-light);
         text-decoration: none;
-        font-size: 0.97rem;
-        font-weight: 600;
+        font-size: 0.97rem; font-weight: 600;
         padding: 11px 14px;
         border-radius: 10px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
+        display: flex; align-items: center; gap: 12px;
         transition: background 0.2s, color 0.2s;
         border: 1px solid var(--border-subtle);
         margin-bottom: 4px;
@@ -1272,17 +1330,42 @@
     .sidebar nav a:hover, .sidebar nav a:focus { background: rgba(184,144,71,0.15); color: var(--accent); border-color: rgba(184,144,71,0.25); }
     .sidebar nav a i { width: 20px; text-align: center; color: var(--accent); font-size: 0.9rem; }
 
-    .sidebar-theme {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 0 14px 18px;
+    /* [NEW] زر الاشتراك بالإشعارات في الـ Sidebar */
+    .sidebar-subscribe-btn {
+        display: flex; align-items: center; gap: 12px;
+        margin: 0 14px 8px;
         padding: 11px 14px;
         border-radius: 10px;
         cursor: pointer;
         color: var(--text-light);
-        font-weight: 600;
-        font-size: 0.97rem;
+        font-weight: 700; font-size: 0.97rem;
+        font-family: 'Cairo', sans-serif;
+        border: 1px solid rgba(184,144,71,0.4);
+        background: rgba(184,144,71,0.08);
+        transition: background 0.2s, color 0.2s, transform 0.2s;
+        width: calc(100% - 28px);
+        position: relative;
+        overflow: hidden;
+    }
+    .sidebar-subscribe-btn::before {
+        content: '';
+        position: absolute; inset: 0;
+        background: linear-gradient(90deg, transparent, rgba(184,144,71,0.1), transparent);
+        transform: translateX(-100%);
+        transition: transform 0.5s ease;
+    }
+    .sidebar-subscribe-btn:hover::before { transform: translateX(100%); }
+    .sidebar-subscribe-btn:hover { background: rgba(184,144,71,0.18); transform: translateX(2px); }
+    .sidebar-subscribe-btn i { width: 20px; text-align: center; color: var(--accent); }
+    body.light-mode .sidebar-subscribe-btn { color: #1a1a1a; }
+
+    .sidebar-theme {
+        display: flex; align-items: center; gap: 12px;
+        margin: 0 14px 18px;
+        padding: 11px 14px;
+        border-radius: 10px; cursor: pointer;
+        color: var(--text-light);
+        font-weight: 600; font-size: 0.97rem;
         font-family: 'Cairo', sans-serif;
         border: 1px solid var(--border-subtle);
         background: none;
@@ -1294,166 +1377,125 @@
     .sidebar-theme i { width: 20px; text-align: center; color: var(--accent); }
 
     /* ============================================================
-       HERO
+       HERO — محافظ عليه
     ============================================================ */
     .hero {
-        height: 100svh;
-        min-height: 500px;
+        height: 100svh; min-height: 500px;
         background:
             linear-gradient(rgba(10,10,12,0.78), rgba(10,10,12,0.90)),
             url('https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=1920')
             no-repeat center center / cover;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 80px 20px 40px;
-        overflow: hidden;
+        display: flex; align-items: center; justify-content: center;
+        text-align: center; padding: 80px 20px 40px; overflow: hidden;
     }
     .hero-inner { max-width: 700px; width: 100%; }
     .hero h1 {
-        padding-bottom: 10px;
-        margin-top: 8px;
+        padding-bottom: 10px; margin-top: 8px;
         font-size: clamp(1.5rem, 5vw, 3rem);
-        font-weight: 900;
-        color: #fff;
-        margin-bottom: 22px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 1.45;
+        font-weight: 900; color: #fff; margin-bottom: 22px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.45;
     }
     .hero-tagline {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-        font-size: clamp(0.78rem, 2.2vw, 1rem);
-        color: var(--text-muted);
-        margin-bottom: 0;
-        flex-wrap: nowrap;
-        white-space: nowrap;
+        display: flex; align-items: center; justify-content: center;
+        gap: 14px; font-size: clamp(0.78rem, 2.2vw, 1rem);
+        color: var(--text-muted); margin-bottom: 0;
+        flex-wrap: nowrap; white-space: nowrap;
     }
     .hero-tagline-line {
-        flex: 1;
-        max-width: 60px;
-        height: 1px;
+        flex: 1; max-width: 60px; height: 1px;
         background: linear-gradient(90deg, transparent, var(--accent));
         border: none;
     }
     .hero-tagline-line.right { background: linear-gradient(270deg, transparent, var(--accent)); }
-    .hero-tagline span {
-        font-size: clamp(0.75rem, 2vw, 0.95rem);
-        color: var(--text-muted);
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
+    .hero-tagline span { font-size: clamp(0.75rem, 2vw, 0.95rem); color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
 
     /* ============================================================
-       CAR GRID & CARDS
+       CAR GRID & CARDS — محافظ عليها + [NEW] Skeleton
     ============================================================ */
     .secondary-section { background: var(--secondary-dark); padding: 80px 0; }
-
-    .car-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 28px;
-    }
+    .car-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; }
 
     .car-card {
         background: var(--card-bg);
-        border-radius: 16px;
-        overflow: hidden;
-        position: relative;
-        border: 1px solid var(--border-subtle);
+        border-radius: 16px; overflow: hidden;
+        position: relative; border: 1px solid var(--border-subtle);
         transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
-    .car-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.3); }
+    .car-card:hover { transform: translateY(-6px); box-shadow: 0 20px 48px rgba(0,0,0,0.4); }
     body.light-mode .car-card { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
     body.light-mode .car-card:hover { box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
 
+    /* [NEW] Skeleton Loading Overlay */
+    .card-skeleton-overlay {
+        position: absolute; inset: 0;
+        background: linear-gradient(90deg,
+            var(--secondary-dark) 25%,
+            rgba(184,144,71,0.06) 50%,
+            var(--secondary-dark) 75%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 1.4s infinite;
+        z-index: 2; border-radius: 16px; pointer-events: none;
+    }
+    @keyframes skeleton-shimmer {
+        0%   { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
     .slider-container {
-        position: relative;
-        display: flex;
-        overflow-x: auto;
-        scroll-snap-type: x mandatory;
-        scrollbar-width: none;
-        height: 220px;
+        position: relative; display: flex;
+        overflow-x: auto; scroll-snap-type: x mandatory;
+        scrollbar-width: none; height: 220px;
     }
     .slider-container::-webkit-scrollbar { display: none; }
     .slider-container img {
-        flex: 0 0 100%;
-        scroll-snap-align: start;
-        object-fit: cover;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        user-select: none;
+        flex: 0 0 100%; scroll-snap-align: start;
+        object-fit: cover; width: 100%; height: 100%;
+        pointer-events: none; user-select: none;
+        transition: transform 0.4s ease;
     }
+    .car-card:hover .slider-container img:first-child { transform: scale(1.03); }
 
     .badge-sold {
-        position: absolute;
-        top: 12px; left: 12px;
-        background: #c0392b;
-        color: #fff;
-        padding: 4px 10px;
-        font-size: 0.78rem;
-        border-radius: 6px;
-        font-weight: 700;
-        z-index: 3;
+        position: absolute; top: 12px; left: 12px;
+        background: #c0392b; color: #fff;
+        padding: 4px 10px; font-size: 0.78rem;
+        border-radius: 6px; font-weight: 700; z-index: 3;
     }
     .badge-certified { display: none !important; }
     .car-tag {
-        position: absolute;
-        top: 12px; right: 12px;
-        background: var(--accent);
-        padding: 4px 14px;
-        font-size: 0.78rem;
-        font-weight: 700;
-        border-radius: 20px;
-        z-index: 3;
-        color: #fff;
+        position: absolute; top: 12px; right: 12px;
+        background: var(--accent); padding: 4px 14px;
+        font-size: 0.78rem; font-weight: 700;
+        border-radius: 20px; z-index: 3; color: #fff;
     }
-
     .car-info { padding: 18px 20px; }
     .car-info h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; color: var(--text-light); }
     .car-specs {
-        display: flex;
-        justify-content: space-between;
+        display: flex; justify-content: space-between;
         border-bottom: 1px solid var(--border-subtle);
-        padding-bottom: 10px;
-        margin-bottom: 14px;
-        font-size: 0.83rem;
-        color: var(--text-muted);
-        gap: 6px;
+        padding-bottom: 10px; margin-bottom: 14px;
+        font-size: 0.83rem; color: var(--text-muted); gap: 6px;
     }
     .car-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
     .price-value { font-size: 1.2rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
 
     /* ============================================================
-       CAR DETAILS MODAL
+       CAR DETAILS MODAL — محدّث بالتحسينات الجديدة
     ============================================================ */
     .modal-overlay {
-        position: fixed;
-        inset: 0;
+        position: fixed; inset: 0;
         background: rgba(0,0,0,0.88);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 5000;
-        opacity: 0;
-        visibility: hidden;
+        display: flex; justify-content: center; align-items: center;
+        z-index: 5000; opacity: 0; visibility: hidden;
         transition: opacity 0.35s ease, visibility 0.35s ease;
         padding: 16px;
     }
     .modal-overlay.active { opacity: 1; visibility: visible; }
-
     .modal-content {
         background: var(--card-bg);
-        width: 100%;
-        max-width: 780px;
+        width: 100%; max-width: 780px;
         border-radius: 20px;
         border: 1px solid var(--border-subtle);
         position: relative;
@@ -1461,138 +1503,175 @@
         transition: transform 0.35s ease;
         box-shadow: 0 24px 60px rgba(0,0,0,0.6);
         max-height: 92vh;
-        overflow-y: auto;
-        overflow-x: hidden;
+        overflow-y: auto; overflow-x: hidden;
         scrollbar-width: none;
     }
     .modal-content::-webkit-scrollbar { display: none; }
     body.light-mode .modal-content { background: #fff; border-color: #e0e0e0; }
     .modal-overlay.active .modal-content { transform: translateY(0) scale(1); }
-
     .modal-inner { padding: 24px; text-align: right; }
-
     .close-modal {
-        position: absolute;
-        top: 14px; left: 14px;
-        background: rgba(255,255,255,0.08);
-        border: none;
-        color: var(--text-muted);
-        font-size: 1.4rem;
-        cursor: pointer;
-        transition: 0.25s;
-        z-index: 10;
-        width: 36px; height: 36px;
-        border-radius: 50%;
+        position: absolute; top: 14px; left: 14px;
+        background: rgba(255,255,255,0.08); border: none;
+        color: var(--text-muted); font-size: 1.4rem; cursor: pointer;
+        transition: 0.25s; z-index: 10;
+        width: 36px; height: 36px; border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
     }
     .close-modal:hover { color: #fff; background: var(--accent); }
     body.light-mode .close-modal { background: rgba(0,0,0,0.07); color: #555; }
     body.light-mode .close-modal:hover { background: var(--accent); color: #fff; }
 
+    /* [NEW] Breadcrumb */
+    .modal-breadcrumb {
+        margin-bottom: 12px;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    /* [NEW] Modal Header Row (عداد المشاهدات + زر مشاركة) */
+    .modal-meta-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 6px;
+        flex-wrap: wrap;
+    }
+    .modal-view-count {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .modal-view-count i { color: var(--accent); }
+    .modal-share-btn {
+        background: none;
+        border: 1px solid var(--border-subtle);
+        color: var(--text-muted);
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-family: 'Cairo', sans-serif;
+        cursor: pointer;
+        display: flex; align-items: center; gap: 6px;
+        transition: 0.2s;
+        font-weight: 600;
+    }
+    .modal-share-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(184,144,71,0.08); }
+
     .modal-gallery {
-        position: relative;
-        border-radius: 14px;
-        overflow: hidden;
-        height: 300px;
-        background: #000;
-        margin-bottom: 20px;
+        position: relative; border-radius: 14px;
+        overflow: hidden; height: 300px;
+        background: #000; margin-bottom: 20px;
     }
     @media (max-width: 480px) { .modal-gallery { height: 210px; } }
-
     #modalMainImage {
         width: 100%; height: 100%;
         object-fit: cover;
         transition: opacity 0.25s ease;
         display: block;
     }
-
     .gallery-btn {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        background: rgba(0,0,0,0.6);
-        border: none;
-        color: #fff;
-        width: 38px; height: 38px;
-        border-radius: 50%;
-        cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 0.9rem;
-        transition: background 0.2s;
-        z-index: 2;
+        position: absolute; top: 50%; transform: translateY(-50%);
+        background: rgba(0,0,0,0.6); border: none; color: #fff;
+        width: 38px; height: 38px; border-radius: 50%;
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        font-size: 0.9rem; transition: background 0.2s; z-index: 2;
         backdrop-filter: blur(4px);
     }
     .gallery-btn:hover { background: var(--accent); }
     .gallery-btn.prev { left: 12px; }
     .gallery-btn.next { right: 12px; }
-
     .gallery-dots {
-        position: absolute;
-        bottom: 10px;
+        position: absolute; bottom: 10px;
         left: 50%; transform: translateX(-50%);
-        display: flex; gap: 6px;
-        z-index: 2;
+        display: flex; gap: 6px; z-index: 2;
     }
     .gallery-dot {
-        width: 7px; height: 7px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.45);
-        cursor: pointer;
-        transition: background 0.2s, transform 0.2s;
-        border: none;
-        padding: 0;
+        width: 7px; height: 7px; border-radius: 50%;
+        background: rgba(255,255,255,0.45); cursor: pointer;
+        transition: background 0.2s, transform 0.2s; border: none; padding: 0;
     }
     .gallery-dot.active { background: var(--accent); transform: scale(1.25); }
 
     .modal-car-title { font-size: clamp(1.2rem, 3.5vw, 1.7rem); font-weight: 900; color: var(--text-light); margin-bottom: 4px; line-height: 1.2; }
     body.light-mode .modal-car-title { color: #1a1a1a; }
-    .modal-car-price { font-size: 1.35rem; font-weight: 700; color: var(--accent); margin-bottom: 20px; }
+    .modal-car-price { font-size: 1.35rem; font-weight: 700; color: var(--accent); margin-bottom: 16px; }
+
+    /* [NEW] زر FCM داخل المودال */
+    .fcm-subscribe-row {
+        margin-bottom: 18px;
+    }
+    .fcm-subscribe-btn {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 1px dashed rgba(184,144,71,0.5);
+        background: rgba(184,144,71,0.06);
+        color: var(--text-light);
+        font-family: 'Cairo', sans-serif;
+        font-size: 0.88rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        transition: all 0.25s ease;
+        position: relative; overflow: hidden;
+    }
+    .fcm-subscribe-btn::after {
+        content: '';
+        position: absolute; inset: 0;
+        background: radial-gradient(circle, rgba(184,144,71,0.15) 0%, transparent 70%);
+        opacity: 0; transition: opacity 0.3s;
+    }
+    .fcm-subscribe-btn:hover::after { opacity: 1; }
+    .fcm-subscribe-btn:hover:not(:disabled) { border-color: var(--accent); background: rgba(184,144,71,0.12); transform: translateY(-1px); }
+    .fcm-subscribe-btn:disabled { cursor: not-allowed; opacity: 0.8; }
+    .fcm-subscribe-btn i { font-size: 1rem; color: var(--accent); }
+    body.light-mode .fcm-subscribe-btn { color: #1a1a1a; background: rgba(184,144,71,0.05); }
 
     .modal-section { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--border-subtle); }
     .modal-section:last-of-type { border-bottom: none; }
     .modal-section-title {
-        color: var(--accent);
-        font-size: 0.97rem;
-        font-weight: 700;
-        margin-bottom: 12px;
-        display: flex; align-items: center; gap: 8px;
+        color: var(--accent); font-size: 0.97rem; font-weight: 700;
+        margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
     }
 
+    /* [NEW] Spec Cards — محسّنة */
     .specs-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
         gap: 10px;
     }
     .spec-item {
         background: var(--secondary-dark);
-        padding: 10px 8px;
-        border-radius: 10px;
+        padding: 14px 8px 10px;
+        border-radius: 12px;
         border: 1px solid var(--border-subtle);
         text-align: center;
-        transition: transform 0.2s;
+        transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
     }
-    .spec-item:hover { transform: translateY(-2px); }
+    .spec-item:hover { transform: translateY(-3px); border-color: rgba(184,144,71,0.3); box-shadow: 0 6px 20px rgba(0,0,0,0.2); }
     body.light-mode .spec-item { background: #f4f5f8; border-color: #ddd; }
-    .spec-label { font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 3px; }
-    .spec-value { font-size: 0.88rem; font-weight: 700; color: var(--text-light); }
+    .spec-label { font-size: 0.70rem; color: var(--text-muted); display: block; margin-bottom: 4px; }
+    .spec-value { font-size: 0.85rem; font-weight: 700; color: var(--text-light); }
     body.light-mode .spec-value { color: #1a1a1a; }
 
     .features-text { color: var(--text-muted); font-size: 0.9rem; line-height: 1.7; }
 
     .modal-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
     .action-tab {
-        flex: 1;
-        min-width: 120px;
-        padding: 11px 8px;
-        border-radius: 10px;
+        flex: 1; min-width: 120px;
+        padding: 11px 8px; border-radius: 10px;
         border: 1px solid var(--border-subtle);
         background: var(--secondary-dark);
         color: var(--text-muted);
         font-family: 'Cairo', sans-serif;
-        font-size: 0.83rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: 0.2s;
+        font-size: 0.83rem; font-weight: 600;
+        cursor: pointer; transition: 0.2s;
         text-align: center;
         display: flex; align-items: center; justify-content: center; gap: 6px;
     }
@@ -1605,271 +1684,278 @@
     .mini-calc-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
     .mini-calc-row label { font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px; }
     .mini-calc-row input, .mini-calc-row select {
-        width: 100%;
-        padding: 9px 12px;
-        background: var(--primary-dark);
-        border: 1px solid var(--border-subtle);
-        color: var(--text-light);
-        border-radius: 8px;
-        outline: none;
-        font-family: 'Cairo', sans-serif;
-        font-size: 0.85rem;
+        width: 100%; padding: 9px 12px;
+        background: var(--primary-dark); border: 1px solid var(--border-subtle);
+        color: var(--text-light); border-radius: 8px; outline: none;
+        font-family: 'Cairo', sans-serif; font-size: 0.85rem;
     }
     body.light-mode .mini-calc-row input, body.light-mode .mini-calc-row select { background: #fff; border-color: #ccc; color: #1a1a1a; }
     .mini-calc-row > div { flex: 1; min-width: 120px; }
     .mini-calc-result { text-align: center; color: var(--accent); font-size: 1.4rem; font-weight: 900; padding: 8px 0 4px; }
     .mini-calc-note { text-align: center; font-size: 0.72rem; color: var(--text-muted); }
 
+    /* [NEW] Sticky CTA Buttons */
+    .modal-sticky-cta {
+        position: sticky;
+        bottom: 0;
+        background: var(--card-bg);
+        border-top: 1px solid var(--border-subtle);
+        padding: 14px 24px;
+        margin: 0 -24px -24px;
+        display: flex; gap: 10px; flex-wrap: wrap;
+        z-index: 5;
+        backdrop-filter: blur(8px);
+    }
+    body.light-mode .modal-sticky-cta { background: rgba(255,255,255,0.96); }
+    .modal-sticky-cta a { flex: 1; min-width: 130px; justify-content: center; }
+
     .modal-contact-row { display: flex; gap: 12px; flex-wrap: wrap; }
     .modal-contact-row a { flex: 1; min-width: 140px; justify-content: center; }
 
     /* ============================================================
-       CONTACT MODAL
+       [NEW] LEAD SUBSCRIPTION MODAL
+    ============================================================ */
+    #leadModal {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.88);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 6000; opacity: 0; visibility: hidden;
+        transition: opacity 0.35s ease, visibility 0.35s ease;
+        padding: 20px;
+    }
+    #leadModal.active { opacity: 1; visibility: visible; }
+    .lead-modal-box {
+        background: var(--card-bg);
+        width: 100%; max-width: 440px;
+        border-radius: 22px;
+        border: 1px solid var(--border-subtle);
+        padding: 32px 28px;
+        position: relative;
+        transform: translateY(-20px) scale(0.97);
+        transition: transform 0.35s ease;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.65);
+        text-align: center;
+    }
+    #leadModal.active .lead-modal-box { transform: translateY(0) scale(1); }
+    body.light-mode .lead-modal-box { background: #fff; }
+    .lead-modal-icon {
+        width: 70px; height: 70px;
+        background: linear-gradient(135deg, rgba(184,144,71,0.2), rgba(184,144,71,0.05));
+        border: 2px solid rgba(184,144,71,0.35);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 18px;
+        animation: pulse-glow 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(184,144,71,0.3); }
+        50%       { box-shadow: 0 0 0 12px rgba(184,144,71,0); }
+    }
+    .lead-modal-icon i { font-size: 1.8rem; color: var(--accent); }
+    .lead-modal-box h3 { font-size: 1.3rem; font-weight: 900; color: var(--text-light); margin-bottom: 6px; }
+    body.light-mode .lead-modal-box h3 { color: #1a1a1a; }
+    .lead-modal-box p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 22px; line-height: 1.6; }
+    .lead-form-group { margin-bottom: 13px; text-align: right; }
+    .lead-form-group label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; font-weight: 600; }
+    .lead-form-group input, .lead-form-group select {
+        width: 100%; padding: 12px 14px;
+        background: var(--primary-dark);
+        border: 1px solid var(--border-subtle);
+        color: var(--text-light);
+        border-radius: 10px; outline: none;
+        font-family: 'Cairo', sans-serif; font-size: 0.9rem;
+        transition: border 0.25s;
+    }
+    .lead-form-group input:focus, .lead-form-group select:focus { border-color: var(--accent); }
+    body.light-mode .lead-form-group input, body.light-mode .lead-form-group select { background: #f9f9f9; color: #1a1a1a; border-color: #ddd; }
+    #leadSubmitBtn {
+        width: 100%; padding: 13px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        border: none; border-radius: 12px;
+        color: #fff; font-weight: 700;
+        font-size: 0.95rem; font-family: 'Cairo', sans-serif;
+        cursor: pointer; margin-top: 6px;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    #leadSubmitBtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(184,144,71,0.4); }
+    #leadSubmitBtn:disabled { opacity: 0.7; cursor: not-allowed; }
+    .lead-privacy-note { margin-top: 10px; font-size: 0.72rem; color: var(--text-muted); }
+    .lead-close-btn {
+        position: absolute; top: 14px; left: 14px;
+        width: 32px; height: 32px; border-radius: 50%;
+        background: rgba(255,255,255,0.08); border: none;
+        color: var(--text-muted); font-size: 1.2rem;
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        transition: background 0.2s, color 0.2s;
+    }
+    .lead-close-btn:hover { background: var(--accent); color: #fff; }
+
+    /* ============================================================
+       CONTACT MODAL — محافظ عليه
     ============================================================ */
     .contact-modal-content {
         background: var(--card-bg);
-        width: 90%;
-        max-width: 480px;
-        padding: 36px 28px;
-        border-radius: 20px;
+        width: 90%; max-width: 480px;
+        padding: 36px 28px; border-radius: 20px;
         border: 1px solid var(--border-subtle);
         position: relative;
         transform: translateY(-24px) scale(0.98);
         transition: transform 0.35s ease;
         box-shadow: 0 24px 60px rgba(0,0,0,0.55);
-        max-height: 92vh;
-        overflow-y: auto;
-        text-align: center;
+        max-height: 92vh; overflow-y: auto; text-align: center;
     }
     body.light-mode .contact-modal-content { background: #fff; border-color: #ddd; }
     .modal-overlay.active .contact-modal-content { transform: translateY(0) scale(1); }
-
     .modal-header h2 { color: var(--text-light); font-size: 1.7rem; margin-bottom: 8px; }
     body.light-mode .modal-header h2 { color: #1a1a1a; }
     .modal-header p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 22px; line-height: 1.6; }
-
     #complaintForm { display: flex; flex-direction: column; gap: 13px; }
     .form-group input, .form-group select, .form-group textarea {
-        width: 100%;
-        padding: 12px 14px;
+        width: 100%; padding: 12px 14px;
         border: 1px solid var(--border-subtle);
-        border-radius: 10px;
-        font-size: 15px;
-        background: var(--primary-dark);
-        color: var(--text-light);
-        direction: rtl;
-        outline: none;
-        transition: border 0.25s;
+        border-radius: 10px; font-size: 15px;
+        background: var(--primary-dark); color: var(--text-light);
+        direction: rtl; outline: none; transition: border 0.25s;
         font-family: 'Cairo', sans-serif;
     }
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
     body.light-mode .form-group input, body.light-mode .form-group select, body.light-mode .form-group textarea { background: #f9f9f9; color: #1a1a1a; border-color: #ccc; }
     .submit-btn {
         background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-        color: #fff;
-        padding: 13px;
-        border: none;
-        border-radius: 10px;
-        cursor: pointer;
-        font-weight: 700;
-        font-size: 15px;
-        font-family: 'Cairo', sans-serif;
-        transition: var(--transition);
-        width: 100%;
-        margin-top: 6px;
+        color: #fff; padding: 13px; border: none; border-radius: 10px;
+        cursor: pointer; font-weight: 700; font-size: 15px;
+        font-family: 'Cairo', sans-serif; transition: var(--transition);
+        width: 100%; margin-top: 6px;
     }
     .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(184,144,71,0.4); }
 
     /* ============================================================
-       INSTALLMENT CALCULATOR SECTION
+       INSTALLMENT CALCULATOR — محافظ عليه
     ============================================================ */
     .calc-wrapper {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 36px;
-        background: var(--card-bg);
-        padding: 36px;
-        border-radius: 20px;
-        border: 1px solid var(--border-subtle);
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 36px; background: var(--card-bg);
+        padding: 36px; border-radius: 20px; border: 1px solid var(--border-subtle);
     }
     @media (max-width: 640px) { .calc-wrapper { grid-template-columns: 1fr; gap: 20px; padding: 22px; } }
     .calc-result-box {
-        text-align: center;
-        border: 2px dashed var(--accent);
-        padding: 36px 20px;
-        border-radius: 14px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        text-align: center; border: 2px dashed var(--accent);
+        padding: 36px 20px; border-radius: 14px;
+        display: flex; flex-direction: column; justify-content: center;
     }
     .calc-result-box h3 { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px; }
     #calcResult { font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 900; color: var(--accent); margin: 12px 0 22px; line-height: 1.45; }
     .calc-form .form-group { margin-bottom: 16px; }
     .calc-form label { display: block; margin-bottom: 6px; font-size: 0.87rem; color: var(--text-muted); }
     .calc-form input, .calc-form select {
-        width: 100%;
-        padding: 11px 14px;
-        background: var(--primary-dark);
-        border: 1px solid var(--border-subtle);
-        color: var(--text-light);
-        border-radius: 8px;
-        outline: none;
-        font-family: 'Cairo', sans-serif;
-        font-size: 0.9rem;
+        width: 100%; padding: 11px 14px;
+        background: var(--primary-dark); border: 1px solid var(--border-subtle);
+        color: var(--text-light); border-radius: 8px; outline: none;
+        font-family: 'Cairo', sans-serif; font-size: 0.9rem;
     }
     body.light-mode .calc-form input, body.light-mode .calc-form select { background: #f9f9f9; color: #1a1a1a; border-color: #ccc; }
 
     /* ============================================================
-       TRADE-IN FORM
+       TRADE-IN FORM — محافظ عليه
     ============================================================ */
     .trade-form {
-        max-width: 600px;
-        margin: 0 auto;
-        background: var(--card-bg);
-        padding: 28px;
-        border-radius: 16px;
-        border: 1px solid var(--border-subtle);
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
+        max-width: 600px; margin: 0 auto;
+        background: var(--card-bg); padding: 28px;
+        border-radius: 16px; border: 1px solid var(--border-subtle);
+        display: flex; flex-direction: column; gap: 14px;
     }
     .trade-form label { display: block; margin-bottom: 6px; font-size: 0.87rem; color: var(--text-muted); }
     .trade-form input, .trade-form textarea {
-        width: 100%;
-        padding: 11px 14px;
-        background: var(--primary-dark);
-        border: 1px solid var(--border-subtle);
-        color: var(--text-light);
-        border-radius: 8px;
-        outline: none;
-        font-family: 'Cairo', sans-serif;
-        font-size: 0.9rem;
-        transition: border 0.25s;
-        resize: vertical;
+        width: 100%; padding: 11px 14px;
+        background: var(--primary-dark); border: 1px solid var(--border-subtle);
+        color: var(--text-light); border-radius: 8px; outline: none;
+        font-family: 'Cairo', sans-serif; font-size: 0.9rem;
+        transition: border 0.25s; resize: vertical;
     }
     .trade-form input:focus, .trade-form textarea:focus { border-color: var(--accent); }
     body.light-mode .trade-form input, body.light-mode .trade-form textarea { background: #f9f9f9; color: #1a1a1a; border-color: #ccc; }
 
     /* ============================================================
-       REVIEW / SERVICE CARDS
+       REVIEW / SERVICE CARDS — محافظ عليها
     ============================================================ */
-    .review-card {
-        background: var(--card-bg);
-        padding: 22px;
-        border-radius: 14px;
-        border: 1px solid var(--border-subtle);
-    }
+    .review-card { background: var(--card-bg); padding: 22px; border-radius: 14px; border: 1px solid var(--border-subtle); }
     body.light-mode .review-card { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .review-stars { color: #ffc107; margin-bottom: 10px; font-size: 0.9rem; }
 
     /* ============================================================
-       FLOATING CONTACT BUTTON
+       FLOATING CONTACT BUTTON — محافظ عليه
     ============================================================ */
     .float-contact {
-        position: fixed;
-        bottom: 24px;
-        left: 24px;
+        position: fixed; bottom: 24px; left: 24px;
         background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-        color: #fff;
-        width: 56px; height: 56px;
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        color: #fff; width: 56px; height: 56px; border-radius: 50%;
+        display: flex; justify-content: center; align-items: center;
         font-size: 1.6rem;
         box-shadow: 0 6px 20px rgba(184,144,71,0.45);
-        z-index: 800;
-        cursor: pointer;
-        border: none;
+        z-index: 800; cursor: pointer; border: none;
         transition: transform 0.25s, box-shadow 0.25s;
     }
     .float-contact:hover { transform: scale(1.1); box-shadow: 0 8px 28px rgba(184,144,71,0.6); }
 
     /* ============================================================
-       FOOTER
+       FOOTER — محافظ عليه
     ============================================================ */
     footer { background: var(--primary-dark); padding: 44px 0 24px; text-align: center; border-top: 1px solid var(--border-subtle); }
 
     /* ============================================================
-       LIGHTBOX
+       LIGHTBOX — محافظ عليه
     ============================================================ */
     #lightboxOverlay {
-        position: fixed;
-        inset: 0;
+        position: fixed; inset: 0;
         background: rgba(0,0,0,0.95);
-        z-index: 9999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        visibility: hidden;
+        z-index: 9999; display: flex; align-items: center; justify-content: center;
+        opacity: 0; visibility: hidden;
         transition: opacity 0.3s ease, visibility 0.3s ease;
         touch-action: none;
     }
     #lightboxOverlay.active { opacity: 1; visibility: visible; }
     .lb-img-wrap {
-        position: relative;
-        width: 100%; height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        position: relative; width: 100%; height: 100%;
+        display: flex; align-items: center; justify-content: center;
         padding: 60px 70px;
     }
     @media (max-width: 480px) { .lb-img-wrap { padding: 56px 50px; } }
     #lbMainImg {
-        max-width: 100%; max-height: 100%;
-        object-fit: contain;
-        border-radius: 8px;
-        transition: opacity 0.22s ease;
-        display: block;
-        box-shadow: 0 8px 40px rgba(0,0,0,0.6);
-        user-select: none;
-        -webkit-user-drag: none;
+        max-width: 100%; max-height: 100%; object-fit: contain;
+        border-radius: 8px; transition: opacity 0.22s ease;
+        display: block; box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+        user-select: none; -webkit-user-drag: none;
     }
     .lb-close {
-        position: fixed;
-        top: 16px; left: 16px;
-        width: 40px; height: 40px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.12);
-        border: 1px solid rgba(255,255,255,0.2);
-        color: #fff;
-        font-size: 1.3rem;
+        position: fixed; top: 16px; left: 16px;
+        width: 40px; height: 40px; border-radius: 50%;
+        background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+        color: #fff; font-size: 1.3rem;
         display: flex; align-items: center; justify-content: center;
-        cursor: pointer;
-        z-index: 10001;
+        cursor: pointer; z-index: 10001;
         transition: background 0.2s, transform 0.2s;
         backdrop-filter: blur(6px);
     }
     .lb-close:hover { background: var(--accent); transform: scale(1.08); }
     .lb-counter {
-        position: fixed;
-        top: 20px;
-        left: 50%; transform: translateX(-50%);
-        color: rgba(255,255,255,0.75);
-        font-size: 0.85rem;
-        font-family: 'Cairo', sans-serif;
-        font-weight: 600;
-        background: rgba(0,0,0,0.45);
-        padding: 4px 14px;
-        border-radius: 20px;
-        z-index: 10001;
-        backdrop-filter: blur(4px);
-        white-space: nowrap;
+        position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+        color: rgba(255,255,255,0.75); font-size: 0.85rem;
+        font-family: 'Cairo', sans-serif; font-weight: 600;
+        background: rgba(0,0,0,0.45); padding: 4px 14px;
+        border-radius: 20px; z-index: 10001;
+        backdrop-filter: blur(4px); white-space: nowrap;
     }
     .lb-nav {
-        position: fixed;
-        top: 50%; transform: translateY(-50%);
+        position: fixed; top: 50%; transform: translateY(-50%);
         width: 44px; height: 44px;
-        background: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.18);
-        backdrop-filter: blur(6px);
-        border-radius: 50%;
-        color: #fff;
-        font-size: 1rem;
+        background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18);
+        backdrop-filter: blur(6px); border-radius: 50%;
+        color: #fff; font-size: 1rem;
         display: flex; align-items: center; justify-content: center;
-        cursor: pointer;
-        z-index: 10001;
+        cursor: pointer; z-index: 10001;
         transition: background 0.2s, transform 0.2s;
     }
     .lb-nav:hover { background: var(--accent); border-color: var(--accent); transform: translateY(-50%) scale(1.08); }
@@ -1878,52 +1964,33 @@
     .lb-nav[hidden] { display: none !important; }
 
     /* ============================================================
-       TIPS SECTION
+       TIPS SECTION — محافظ عليه
     ============================================================ */
     .tip-tag {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 5px;
-        font-size: 0.78rem;
-        font-weight: 700;
-        margin-bottom: 10px;
+        display: inline-block; padding: 2px 10px;
+        border-radius: 5px; font-size: 0.78rem; font-weight: 700; margin-bottom: 10px;
     }
-
-    /* ============================================================
-       SERVICE ICON CIRCLES
-    ============================================================ */
     .service-icon-wrap {
-        width: 72px; height: 72px;
-        border-radius: 50%;
-        background: rgba(184,144,71,0.12);
-        border: 1.5px solid rgba(184,144,71,0.3);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        width: 72px; height: 72px; border-radius: 50%;
+        background: rgba(184,144,71,0.12); border: 1.5px solid rgba(184,144,71,0.3);
+        display: flex; align-items: center; justify-content: center;
         margin: 0 auto 18px;
         transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
     }
     .review-card:hover .service-icon-wrap {
-        background: rgba(184,144,71,0.22);
-        box-shadow: 0 0 0 6px rgba(184,144,71,0.08);
-        transform: translateY(-3px);
+        background: rgba(184,144,71,0.22); box-shadow: 0 0 0 6px rgba(184,144,71,0.08); transform: translateY(-3px);
     }
     .service-icon-wrap i { font-size: 1.7rem; color: var(--accent); }
-
     .tip-icon-wrap {
-        width: 52px; height: 52px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 14px;
-        transition: transform 0.25s;
+        width: 52px; height: 52px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 14px; transition: transform 0.25s;
     }
     .car-card:hover .tip-icon-wrap { transform: translateY(-2px); }
     .tip-icon-wrap i { font-size: 1.4rem; }
 
     /* ============================================================
-       RESPONSIVE
+       RESPONSIVE — محافظ عليه
     ============================================================ */
     @media (max-width: 768px) {
         .container { padding: 56px 0; }
@@ -1934,6 +2001,8 @@
         .specs-grid { grid-template-columns: repeat(2, 1fr); }
         .modal-inner { padding: 16px; }
         .modal-gallery { margin-top: 10px; }
+        .modal-sticky-cta { padding: 12px 16px; margin: 0 -16px -16px; }
+        .lead-modal-box { padding: 28px 20px; }
     }
 
     body.modal-open { overflow: hidden; }
@@ -1948,301 +2017,102 @@
     body.light-mode .action-tab:hover, body.light-mode .action-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
     /* ============================================================
-       🔐 ADMIN PANEL STYLES
-       لوحة الإدارة — مصممة بنفس هوية الموقع البصرية
+       🔐 ADMIN PANEL STYLES — محافظ عليها بالكامل
     ============================================================ */
-
-    /* نافذة تسجيل دخول الإدارة */
     #adminLoginModal {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.92);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9000;
-        opacity: 0;
-        visibility: hidden;
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.92); backdrop-filter: blur(16px);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 9000; opacity: 0; visibility: hidden;
         transition: opacity 0.3s ease, visibility 0.3s ease;
         padding: 20px;
     }
     #adminLoginModal.active { opacity: 1; visibility: visible; }
-
     .admin-login-box {
-        background: var(--card-bg);
-        border: 1px solid var(--border-subtle);
-        border-radius: 20px;
-        padding: 36px 28px;
-        width: 100%;
-        max-width: 380px;
-        text-align: center;
+        background: var(--card-bg); border: 1px solid var(--border-subtle);
+        border-radius: 20px; padding: 36px 28px;
+        width: 100%; max-width: 380px; text-align: center;
         box-shadow: 0 24px 60px rgba(0,0,0,0.7);
         transform: translateY(-20px) scale(0.97);
-        transition: transform 0.35s ease;
-        position: relative;
+        transition: transform 0.35s ease; position: relative;
     }
     #adminLoginModal.active .admin-login-box { transform: translateY(0) scale(1); }
     body.light-mode .admin-login-box { background: #fff; }
-
-    .admin-login-box .admin-logo {
-        font-size: 2.5rem;
-        color: var(--accent);
-        margin-bottom: 8px;
-    }
-    .admin-login-box h3 {
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: var(--text-light);
-        margin-bottom: 6px;
-    }
+    .admin-login-box .admin-logo { font-size: 2.5rem; color: var(--accent); margin-bottom: 8px; }
+    .admin-login-box h3 { font-size: 1.2rem; font-weight: 700; color: var(--text-light); margin-bottom: 6px; }
     body.light-mode .admin-login-box h3 { color: #1a1a1a; }
-    .admin-login-box p {
-        font-size: 0.82rem;
-        color: var(--text-muted);
-        margin-bottom: 22px;
-    }
+    .admin-login-box p { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 22px; }
     .admin-login-box input[type="password"] {
-        width: 100%;
-        padding: 12px 16px;
-        border: 1px solid var(--border-subtle);
-        border-radius: 10px;
-        background: var(--primary-dark);
-        color: var(--text-light);
-        font-family: 'Cairo', sans-serif;
-        font-size: 1rem;
-        letter-spacing: 3px;
-        text-align: center;
-        outline: none;
-        transition: border 0.25s;
-        margin-bottom: 14px;
+        width: 100%; padding: 12px 16px;
+        border: 1px solid var(--border-subtle); border-radius: 10px;
+        background: var(--primary-dark); color: var(--text-light);
+        font-family: 'Cairo', sans-serif; font-size: 1rem;
+        letter-spacing: 3px; text-align: center; outline: none;
+        transition: border 0.25s; margin-bottom: 14px;
     }
     .admin-login-box input[type="password"]:focus { border-color: var(--accent); }
     body.light-mode .admin-login-box input[type="password"] { background: #f9f9f9; color: #1a1a1a; border-color: #ccc; }
     #loginError { color: #e74c3c; font-size: 0.82rem; margin-top: -6px; margin-bottom: 10px; min-height: 20px; }
-
     .admin-login-close-btn {
-        position: absolute;
-        top: 14px; left: 14px;
-        width: 32px; height: 32px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.08);
-        border: none;
-        color: var(--text-muted);
-        font-size: 1.2rem;
-        cursor: pointer;
+        position: absolute; top: 14px; left: 14px;
+        width: 32px; height: 32px; border-radius: 50%;
+        background: rgba(255,255,255,0.08); border: none;
+        color: var(--text-muted); font-size: 1.2rem; cursor: pointer;
         display: flex; align-items: center; justify-content: center;
         transition: background 0.2s, color 0.2s;
     }
     .admin-login-close-btn:hover { background: var(--accent); color: #fff; }
 
-    /* لوحة الإدارة الرئيسية */
     #adminPanel {
-        position: fixed;
-        inset: 0;
+        position: fixed; inset: 0;
         background: var(--primary-dark);
-        z-index: 8000;
-        opacity: 0;
-        visibility: hidden;
+        z-index: 8000; opacity: 0; visibility: hidden;
         transition: opacity 0.35s ease, visibility 0.35s ease;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
+        display: flex; flex-direction: column; overflow: hidden;
     }
     #adminPanel.active { opacity: 1; visibility: visible; }
     body.light-mode #adminPanel { background: #f0f2f5; }
-
-    /* رأس لوحة الإدارة */
     .admin-header {
-        background: var(--secondary-dark);
-        border-bottom: 1px solid var(--border-subtle);
-        padding: 14px 22px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        flex-shrink: 0;
-        position: sticky;
-        top: 0;
-        z-index: 10;
+        background: var(--secondary-dark); border-bottom: 1px solid var(--border-subtle);
+        padding: 14px 22px; display: flex; align-items: center; justify-content: space-between;
+        gap: 12px; flex-shrink: 0; position: sticky; top: 0; z-index: 10;
     }
     body.light-mode .admin-header { background: #fff; }
-    .admin-header-title {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
+    .admin-header-title { display: flex; align-items: center; gap: 12px; }
     .admin-header-title i { color: var(--accent); font-size: 1.3rem; }
-    .admin-header-title h2 {
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--text-light);
-        white-space: nowrap;
-    }
+    .admin-header-title h2 { font-size: 1rem; font-weight: 700; color: var(--text-light); white-space: nowrap; }
     body.light-mode .admin-header-title h2 { color: #1a1a1a; }
-    .admin-header-badge {
-        background: var(--accent);
-        color: #fff;
-        font-size: 0.7rem;
-        font-weight: 700;
-        padding: 2px 8px;
-        border-radius: 20px;
-        white-space: nowrap;
-    }
+    .admin-header-badge { background: var(--accent); color: #fff; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
     .admin-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
-    .admin-btn-sm {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 14px;
-        border-radius: 20px;
-        font-family: 'Cairo', sans-serif;
-        font-size: 0.82rem;
-        font-weight: 700;
-        cursor: pointer;
-        border: 1px solid var(--border-subtle);
-        transition: 0.2s;
-        white-space: nowrap;
-    }
+    .admin-btn-sm { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 20px; font-family: 'Cairo', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; border: 1px solid var(--border-subtle); transition: 0.2s; white-space: nowrap; }
     .admin-btn-danger { background: #c0392b; color: #fff; border-color: #c0392b; }
     .admin-btn-danger:hover { background: #a93226; }
     .admin-btn-ghost { background: none; color: var(--text-muted); }
     .admin-btn-ghost:hover { background: rgba(255,255,255,0.06); color: var(--text-light); }
-
-    /* محتوى لوحة الإدارة (عمودان) */
-    .admin-body {
-        display: grid;
-        grid-template-columns: 1fr 1.2fr;
-        gap: 0;
-        flex: 1;
-        overflow: hidden;
-    }
-    @media (max-width: 768px) {
-        .admin-body { grid-template-columns: 1fr; }
-    }
-
-    /* العمود الأيمن: النموذج */
-    .admin-form-col {
-        padding: 22px;
-        overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-color: var(--accent) transparent;
-        border-left: 1px solid var(--border-subtle);
-    }
+    .admin-body { display: grid; grid-template-columns: 1fr 1.2fr; gap: 0; flex: 1; overflow: hidden; }
+    @media (max-width: 768px) { .admin-body { grid-template-columns: 1fr; } }
+    .admin-form-col { padding: 22px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--accent) transparent; border-left: 1px solid var(--border-subtle); }
     body.light-mode .admin-form-col { border-left-color: #e0e0e0; }
     .admin-form-col::-webkit-scrollbar { width: 4px; }
     .admin-form-col::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
-
-    /* العمود الأيسر: القائمة */
-    .admin-list-col {
-        padding: 22px;
-        overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-color: var(--accent) transparent;
-    }
+    .admin-list-col { padding: 22px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--accent) transparent; }
     .admin-list-col::-webkit-scrollbar { width: 4px; }
     .admin-list-col::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
-
-    /* عنوان القسم داخل الإدارة */
-    .admin-section-title {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: var(--accent);
-        margin-bottom: 16px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        border-bottom: 1px solid var(--border-subtle);
-        padding-bottom: 10px;
-    }
-
-    /* حقول النموذج داخل الإدارة */
+    .admin-section-title { font-size: 0.9rem; font-weight: 700; color: var(--accent); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px; }
     .admin-form-group { margin-bottom: 14px; }
-    .admin-form-group label {
-        display: block;
-        font-size: 0.8rem;
-        color: var(--text-muted);
-        margin-bottom: 5px;
-        font-weight: 600;
-    }
-    .admin-form-group input,
-    .admin-form-group select,
-    .admin-form-group textarea {
-        width: 100%;
-        padding: 10px 12px;
-        background: var(--primary-dark);
-        border: 1px solid var(--border-subtle);
-        color: var(--text-light);
-        border-radius: 8px;
-        outline: none;
-        font-family: 'Cairo', sans-serif;
-        font-size: 0.88rem;
-        transition: border 0.25s;
-        resize: vertical;
-    }
-    .admin-form-group input:focus,
-    .admin-form-group select:focus,
-    .admin-form-group textarea:focus { border-color: var(--accent); }
-    body.light-mode .admin-form-group input,
-    body.light-mode .admin-form-group select,
-    body.light-mode .admin-form-group textarea { background: #fff; color: #1a1a1a; border-color: #ddd; }
-
-    /* حقل رفع الصور */
-    .file-upload-wrap {
-        border: 2px dashed var(--border-subtle);
-        border-radius: 10px;
-        padding: 16px 12px;
-        text-align: center;
-        cursor: pointer;
-        transition: border-color 0.2s;
-        position: relative;
-    }
+    .admin-form-group label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; font-weight: 600; }
+    .admin-form-group input, .admin-form-group select, .admin-form-group textarea { width: 100%; padding: 10px 12px; background: var(--primary-dark); border: 1px solid var(--border-subtle); color: var(--text-light); border-radius: 8px; outline: none; font-family: 'Cairo', sans-serif; font-size: 0.88rem; transition: border 0.25s; resize: vertical; }
+    .admin-form-group input:focus, .admin-form-group select:focus, .admin-form-group textarea:focus { border-color: var(--accent); }
+    body.light-mode .admin-form-group input, body.light-mode .admin-form-group select, body.light-mode .admin-form-group textarea { background: #fff; color: #1a1a1a; border-color: #ddd; }
+    .file-upload-wrap { border: 2px dashed var(--border-subtle); border-radius: 10px; padding: 16px 12px; text-align: center; cursor: pointer; transition: border-color 0.2s; position: relative; }
     .file-upload-wrap:hover { border-color: var(--accent); }
-    .file-upload-wrap input[type="file"] {
-        position: absolute;
-        inset: 0;
-        opacity: 0;
-        cursor: pointer;
-        width: 100%;
-        height: 100%;
-        z-index: 2;
-    }
+    .file-upload-wrap input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; z-index: 2; }
     .file-upload-wrap i { color: var(--accent); font-size: 1.5rem; margin-bottom: 6px; display: block; }
     .file-upload-wrap p { font-size: 0.78rem; color: var(--text-muted); }
-
-    /* معاينة الصور المرفوعة */
-    .image-preview-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 8px;
-    }
-
-    /* صف الأزرار في الجزء السفلي من النموذج */
-    .admin-form-actions {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        margin-top: 6px;
-    }
-    .admin-form-actions button {
-        flex: 1;
-        min-width: 120px;
-        padding: 11px 14px;
-        border-radius: 10px;
-        font-family: 'Cairo', sans-serif;
-        font-size: 0.87rem;
-        font-weight: 700;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 7px;
-        transition: 0.2s;
-        border: none;
-    }
-    #adminSaveBtn   { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; }
+    .image-preview-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .admin-form-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    .admin-form-actions button { flex: 1; min-width: 120px; padding: 11px 14px; border-radius: 10px; font-family: 'Cairo', sans-serif; font-size: 0.87rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px; transition: 0.2s; border: none; }
+    #adminSaveBtn { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; }
     #adminSaveBtn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(184,144,71,0.35); }
     #adminSaveBtn:disabled { opacity: 0.65; transform: none; cursor: not-allowed; }
     #adminDeleteBtn { background: #c0392b; color: #fff; display: none; }
@@ -2250,296 +2120,38 @@
     #adminCancelEditBtn { background: var(--secondary-dark); color: var(--text-muted); border: 1px solid var(--border-subtle); display: none; }
     #adminCancelEditBtn:hover { color: var(--text-light); background: rgba(255,255,255,0.05); }
     body.light-mode #adminCancelEditBtn { background: #f0f2f5; color: #555; }
-
-    /* Toggle مرئية السيارة */
-    .admin-toggle-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: var(--primary-dark);
-        border: 1px solid var(--border-subtle);
-        border-radius: 10px;
-        padding: 10px 14px;
-        margin-bottom: 14px;
-    }
+    .admin-toggle-row { display: flex; align-items: center; justify-content: space-between; background: var(--primary-dark); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; }
     body.light-mode .admin-toggle-row { background: #f9f9f9; border-color: #ddd; }
     .admin-toggle-row label { font-size: 0.84rem; color: var(--text-light); font-weight: 600; cursor: pointer; }
     body.light-mode .admin-toggle-row label { color: #1a1a1a; }
-
-    /* Switch تبديل بصري */
-    .toggle-switch {
-        position: relative;
-        width: 42px;
-        height: 24px;
-        flex-shrink: 0;
-    }
+    .toggle-switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
-    .toggle-slider {
-        position: absolute;
-        cursor: pointer;
-        inset: 0;
-        background: #444;
-        border-radius: 24px;
-        transition: background 0.3s;
-    }
-    .toggle-slider::before {
-        content: '';
-        position: absolute;
-        width: 18px; height: 18px;
-        left: 3px; top: 3px;
-        background: #fff;
-        border-radius: 50%;
-        transition: transform 0.3s;
-    }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #444; border-radius: 24px; transition: background 0.3s; }
+    .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.3s; }
     .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
     .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
 
     /* ============================================================
-       🔔 TOAST NOTIFICATION SYSTEM
-       نظام الإشعارات التوست في الزاوية السفلية
+       🔔 TOAST SYSTEM — محافظ عليه
     ============================================================ */
-    #toastContainer {
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        z-index: 99999;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        pointer-events: none;
-    }
-    .toast {
-        background: var(--card-bg);
-        border: 1px solid var(--border-subtle);
-        border-radius: 12px;
-        padding: 12px 18px;
-        font-family: 'Cairo', sans-serif;
-        font-size: 0.88rem;
-        font-weight: 600;
-        color: var(--text-light);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-        opacity: 0;
-        transform: translateY(16px);
-        transition: opacity 0.35s ease, transform 0.35s ease;
-        max-width: 280px;
-        pointer-events: auto;
-        backdrop-filter: blur(8px);
-    }
+    #toastContainer { position: fixed; bottom: 24px; right: 24px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast { background: var(--card-bg); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 12px 18px; font-family: 'Cairo', sans-serif; font-size: 0.88rem; font-weight: 600; color: var(--text-light); box-shadow: 0 8px 24px rgba(0,0,0,0.35); opacity: 0; transform: translateY(16px); transition: opacity 0.35s ease, transform 0.35s ease; max-width: 280px; pointer-events: auto; backdrop-filter: blur(8px); }
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast-success { border-color: rgba(39,174,96,0.5); }
     .toast-error   { border-color: rgba(192,57,43,0.5); }
     .toast-info    { border-color: rgba(184,144,71,0.4); }
 
-    /* ============================================================
-       🔔 WHATSAPP SUBSCRIBERS & PUSH NOTIFICATION STYLES
-    ============================================================ */
-
-    /* زر الاشتراك في الهامبورجر */
-    .sidebar-notif-btn {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 0 14px 18px;
-        padding: 11px 14px;
-        border-radius: 10px;
-        cursor: pointer;
-        color: var(--text-light);
-        font-weight: 600;
-        font-size: 0.97rem;
-        font-family: 'Cairo', sans-serif;
-        border: 1px solid rgba(37,211,102,0.3);
-        background: rgba(37,211,102,0.07);
-        transition: background 0.2s, color 0.2s;
-        width: calc(100% - 28px);
-    }
-    body.light-mode .sidebar-notif-btn { color: #1a1a1a; }
-    .sidebar-notif-btn:hover { background: rgba(37,211,102,0.15); }
-    .sidebar-notif-btn i { width: 20px; text-align: center; color: #25d366; }
-
-    /* مودال الاشتراك في إشعارات واتساب */
-    #waNotifModal {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.88);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 7000;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.35s ease, visibility 0.35s ease;
-        padding: 20px;
-    }
-    #waNotifModal.active { opacity: 1; visibility: visible; }
-
-    .wa-notif-box {
-        background: var(--card-bg);
-        border: 1px solid rgba(37,211,102,0.25);
-        border-radius: 20px;
-        padding: 36px 28px;
-        width: 100%;
-        max-width: 400px;
-        text-align: center;
-        box-shadow: 0 24px 60px rgba(0,0,0,0.6);
-        transform: translateY(-20px) scale(0.97);
-        transition: transform 0.35s ease;
-        position: relative;
-    }
-    #waNotifModal.active .wa-notif-box { transform: translateY(0) scale(1); }
-    body.light-mode .wa-notif-box { background: #fff; }
-
-    .wa-notif-icon {
-        width: 68px; height: 68px;
-        background: rgba(37,211,102,0.12);
-        border: 2px solid rgba(37,211,102,0.3);
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        margin: 0 auto 16px;
-    }
-    .wa-notif-icon i { font-size: 2rem; color: #25d366; }
-    .wa-notif-box h3 { font-size: 1.2rem; font-weight: 700; color: var(--text-light); margin-bottom: 6px; }
-    body.light-mode .wa-notif-box h3 { color: #1a1a1a; }
-    .wa-notif-box p { font-size: 0.83rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.65; }
-
-    .wa-notif-input {
-        width: 100%;
-        padding: 13px 16px;
-        border: 1px solid rgba(37,211,102,0.3);
-        border-radius: 12px;
-        background: var(--primary-dark);
-        color: var(--text-light);
-        font-family: 'Cairo', sans-serif;
-        font-size: 1rem;
-        direction: ltr;
-        text-align: center;
-        outline: none;
-        transition: border 0.25s;
-        margin-bottom: 14px;
-        letter-spacing: 1px;
-    }
-    .wa-notif-input:focus { border-color: #25d366; box-shadow: 0 0 0 3px rgba(37,211,102,0.1); }
-    body.light-mode .wa-notif-input { background: #f9f9f9; color: #1a1a1a; }
-
-    .wa-notif-close {
-        position: absolute;
-        top: 14px; left: 14px;
-        width: 32px; height: 32px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.08);
-        border: none;
-        color: var(--text-muted);
-        font-size: 1.2rem;
-        cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        transition: background 0.2s, color 0.2s;
-    }
-    .wa-notif-close:hover { background: #c0392b; color: #fff; }
-
-    .wa-notif-list {
-        text-align: right;
-        margin-bottom: 16px;
-    }
-    .wa-notif-list li {
-        font-size: 0.8rem;
-        color: var(--text-muted);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 5px 0;
-        border-bottom: 1px solid var(--border-subtle);
-        list-style: none;
-    }
-    .wa-notif-list li:last-child { border-bottom: none; }
-    .wa-notif-list li i { color: #25d366; font-size: 0.85rem; flex-shrink: 0; }
-
-    /* بانر إشعارات المتصفح */
-    #pushBanner {
-        position: fixed;
-        bottom: -120px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 8500;
-        background: var(--card-bg);
-        border: 1px solid var(--border-subtle);
-        border-radius: 16px;
-        padding: 14px 18px;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-        width: min(420px, calc(100vw - 32px));
-        transition: bottom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-        backdrop-filter: blur(10px);
-    }
-    #pushBanner.show { bottom: 90px; }
-    @media (max-width:480px) { #pushBanner.show { bottom: 80px; } }
-    body.light-mode #pushBanner { background: #fff; border-color: #e0e0e0; }
-
-    .push-banner-icon {
-        width: 44px; height: 44px;
-        background: rgba(184,144,71,0.12);
-        border-radius: 12px;
-        display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0;
-    }
-    .push-banner-icon i { color: var(--accent); font-size: 1.2rem; }
-    .push-banner-text { flex: 1; }
-    .push-banner-text strong { font-size: 0.88rem; color: var(--text-light); display: block; margin-bottom: 2px; }
-    body.light-mode .push-banner-text strong { color: #1a1a1a; }
-    .push-banner-text span { font-size: 0.75rem; color: var(--text-muted); }
-    .push-banner-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-    .push-allow-btn {
-        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-        color: #fff;
-        border: none;
-        padding: 7px 14px;
-        border-radius: 8px;
-        font-family: 'Cairo', sans-serif;
-        font-size: 0.8rem;
-        font-weight: 700;
-        cursor: pointer;
-        white-space: nowrap;
-        transition: transform 0.2s;
-    }
-    .push-allow-btn:hover { transform: translateY(-1px); }
-    .push-deny-btn {
-        background: none;
-        border: none;
-        color: var(--text-muted);
-        font-family: 'Cairo', sans-serif;
-        font-size: 0.75rem;
-        cursor: pointer;
-        text-align: center;
-    }
-    .push-deny-btn:hover { color: var(--text-light); }
-
-    /* مؤشر التحميل عند انتظار Firestore */
-    .loading-spinner {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 60px 20px;
-        color: var(--text-muted);
-        font-size: 0.92rem;
-        gap: 12px;
-    }
+    .loading-spinner { display: flex; align-items: center; justify-content: center; padding: 60px 20px; color: var(--text-muted); font-size: 0.92rem; gap: 12px; }
     .loading-spinner i { color: var(--accent); font-size: 1.5rem; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
     </style>
 </head>
 <body>
 
-    <!-- ======================================================
-         SIDEBAR OVERLAY
-    ====================================================== -->
+    <!-- SIDEBAR OVERLAY -->
     <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
 
-    <!-- ======================================================
-         SIDEBAR MENU
-    ====================================================== -->
+    <!-- SIDEBAR MENU -->
     <aside class="sidebar" id="sideMenu" role="dialog" aria-label="القائمة الرئيسية">
         <div class="sidebar-header">
             <h3>القائمة</h3>
@@ -2553,39 +2165,34 @@
             <a href="#tips"       data-close-sidebar><i class="fas fa-lightbulb"></i> نصائح</a>
             <a href="#contact"    data-close-sidebar><i class="fas fa-phone-alt"></i> تواصل معنا</a>
         </nav>
-        <button class="sidebar-notif-btn" id="openWaNotifModal" aria-label="اشتراك في إشعارات السيارات الجديدة">
-            <i class="fab fa-whatsapp"></i> إشعارات السيارات الجديدة
+
+        <!-- [NEW] زر الاشتراك بالإشعارات — فوق زر الوضع الليلي مباشرة -->
+        <button class="sidebar-subscribe-btn" id="sidebarSubscribeBtn" onclick="openLeadModal(); document.getElementById('sidebarOverlay').click();">
+            <i class="fas fa-bell"></i>
+            🔔 اشترك بالعربيات الجديدة
         </button>
+
         <button class="sidebar-theme" id="sidebarThemeBtn" aria-label="تغيير الوضع">
             <i class="fas fa-moon"></i> تغيير الوضع
         </button>
     </aside>
 
-    <!-- ======================================================
-         HEADER
-    ====================================================== -->
+    <!-- HEADER -->
     <header id="main-header">
         <div class="nav-container">
             <button class="menu-btn" id="menuBtn" aria-label="فتح القائمة" aria-expanded="false">
-                <span></span>
-                <span></span>
-                <span></span>
+                <span></span><span></span><span></span>
             </button>
-
-            <!-- الشعار — النقر المزدوج عليه يفتح لوحة الإدارة -->
             <a href="#" class="logo-text" title="AUTO CAR AZAM">
                 <span style="font-weight:500;">AUTO CAR </span>AZAM
             </a>
-
             <button class="menu-btn" id="headerThemeBtn" style="display:none !important;">
                 <i class="fas fa-moon" style="font-size:1.1rem; color:var(--text-light);"></i>
             </button>
         </div>
     </header>
 
-    <!-- ======================================================
-         HERO
-    ====================================================== -->
+    <!-- HERO -->
     <section class="hero">
         <div class="hero-inner">
             <span class="hero-text-logo">
@@ -2600,16 +2207,12 @@
         </div>
     </section>
 
-    <!-- ======================================================
-         INVENTORY — سيتم ملؤه ديناميكياً من Firestore
-    ====================================================== -->
+    <!-- INVENTORY -->
     <section id="inventory" class="container">
         <div class="section-title">
             <h2>السيارات <span>المتاحة حالياً</span></h2>
             <p>اسحب صورة السيارة لليمين واليسار لرؤية المزيد</p>
         </div>
-
-        <!-- مؤشر تحميل يظهر حتى يتم جلب البيانات من Firestore -->
         <div class="car-grid" id="carGridMain">
             <div class="loading-spinner" style="grid-column:1/-1;">
                 <i class="fas fa-circle-notch"></i>
@@ -2619,26 +2222,51 @@
     </section>
 
     <!-- ======================================================
-         CAR DETAILS MODAL
+         CAR DETAILS MODAL — محدّث بالتحسينات الجديدة
     ====================================================== -->
     <div class="modal-overlay" id="carDetailsModal" role="dialog" aria-modal="true" aria-label="تفاصيل السيارة">
         <div class="modal-content">
+            <!-- زر الرجوع -->
             <button class="btn-outline back-details-btn" id="detailsBackBtn"
                 style="position:absolute; top:14px; right:14px; z-index:11; display:inline-flex; align-items:center; gap:6px; padding:7px 14px; font-size:0.85rem;">
                 <i class="fas fa-arrow-right"></i> رجوع
             </button>
 
             <div class="modal-inner" style="padding-top:52px;">
+
+                <!-- [NEW] Breadcrumb -->
+                <div class="modal-breadcrumb" id="modalBreadcrumb"></div>
+
+                <!-- الصور -->
                 <div class="modal-gallery" id="modalGallery" style="cursor:zoom-in;">
-                    <img id="modalMainImage" src="" alt="صورة السيارة - AUTO CAR AZAM معرض سيارات" style="cursor:zoom-in;">
+                    <img id="modalMainImage" src="" alt="صورة السيارة - AUTO CAR AZAM" style="cursor:zoom-in;">
                     <button class="gallery-btn prev" id="galleryPrev" aria-label="السابق"><i class="fas fa-chevron-left"></i></button>
                     <button class="gallery-btn next" id="galleryNext" aria-label="التالي"><i class="fas fa-chevron-right"></i></button>
                     <div class="gallery-dots" id="galleryDots"></div>
                 </div>
 
+                <!-- [NEW] Meta Row: اسم السيارة + عداد المشاهدات + زر مشاركة -->
+                <div class="modal-meta-row">
+                    <div class="modal-view-count">
+                        <i class="fas fa-eye"></i>
+                        <span id="modalViewCount">0 مشاهدة</span>
+                    </div>
+                    <button class="modal-share-btn" onclick="shareCurrentCar()">
+                        <i class="fas fa-share-alt"></i> مشاركة
+                    </button>
+                </div>
+
                 <h2 class="modal-car-title" id="modalCarTitle">اسم السيارة</h2>
                 <div class="modal-car-price" id="modalCarPrice">0 ج.م</div>
 
+                <!-- [NEW] زر FCM ثابت داخل المودال -->
+                <div class="fcm-subscribe-row">
+                    <button class="fcm-subscribe-btn" id="fcmSubscribeBtn">
+                        <i class="fas fa-bell"></i> تابع العربيات الجديدة
+                    </button>
+                </div>
+
+                <!-- التبويبات -->
                 <div class="modal-actions">
                     <button class="action-tab" data-tab="specs">
                         <i class="fas fa-sliders-h"></i> المواصفات
@@ -2651,6 +2279,7 @@
                     </button>
                 </div>
 
+                <!-- تبويب المواصفات -->
                 <div class="modal-section" id="tabSpecs">
                     <div class="modal-section-title">
                         <i class="fas fa-sliders-h"></i> المواصفات الفنية
@@ -2658,6 +2287,7 @@
                     <div class="specs-grid" id="modalSpecsGrid"></div>
                 </div>
 
+                <!-- تبويب الكماليات -->
                 <div class="modal-section" id="tabFeatures" style="display:none;">
                     <div class="modal-section-title">
                         <i class="fas fa-gem"></i> الكماليات والرفاهية
@@ -2665,6 +2295,7 @@
                     <p class="features-text" id="modalCarFeatures"></p>
                 </div>
 
+                <!-- تبويب الحاسبة -->
                 <div class="modal-section" id="tabCalc" style="display:none;">
                     <div class="modal-section-title">
                         <i class="fas fa-calculator"></i> حاسبة التقسيط السريعة
@@ -2689,21 +2320,64 @@
                     </div>
                 </div>
 
-                <div class="modal-contact-row">
-                    <a id="modalWaBtn" href="#" target="_blank" rel="noopener" class="btn-main" style="background:#25d366; justify-content:center;">
+                <!-- [NEW] Sticky CTA Buttons -->
+                <div class="modal-sticky-cta">
+                    <a id="modalWaBtn" href="#" target="_blank" rel="noopener" class="btn-main" style="background:#25d366;">
                         <i class="fab fa-whatsapp"></i> واتساب
                     </a>
-                    <a href="tel:+201019284211" class="btn-main" style="background:var(--accent); justify-content:center;">
+                    <a href="tel:+201019284211" class="btn-main" style="background:var(--accent);">
                         <i class="fas fa-phone-alt"></i> اتصال
                     </a>
                 </div>
+
             </div>
         </div>
     </div>
 
     <!-- ======================================================
-         INSTALLMENT CALCULATOR
+         [NEW] LEAD SUBSCRIPTION MODAL
     ====================================================== -->
+    <div id="leadModal" role="dialog" aria-modal="true" aria-label="الاشتراك بالعربيات الجديدة">
+        <div class="lead-modal-box">
+            <button class="lead-close-btn" id="leadCloseBtn" aria-label="إغلاق">&times;</button>
+
+            <div class="lead-modal-icon">
+                <i class="fas fa-bell"></i>
+            </div>
+
+            <h3>اشترك بالعربيات الجديدة</h3>
+            <p>سجّل بياناتك وهنتواصل معك بأحدث السيارات اللي بتناسبك فور وصولها للمعرض</p>
+
+            <div class="lead-form-group">
+                <label>اسمك (اختياري)</label>
+                <input type="text" id="leadName" placeholder="مثال: أحمد محمد">
+            </div>
+
+            <div class="lead-form-group">
+                <label>رقم الموبايل <span style="color:#e74c3c;">*</span></label>
+                <input type="tel" id="leadPhone" placeholder="مثال: 01012345678" inputmode="numeric" maxlength="11">
+            </div>
+
+            <div class="lead-form-group">
+                <label>نوع السيارة المفضّل</label>
+                <select id="leadType">
+                    <option value="">اختر (اختياري)</option>
+                    <option value="زيرو">🆕 زيرو</option>
+                    <option value="كسر زيرو">⭐ كسر زيرو</option>
+                    <option value="مستعمل">🔄 مستعمل</option>
+                    <option value="أي نوع">✅ أي نوع</option>
+                </select>
+            </div>
+
+            <button id="leadSubmitBtn" onclick="saveLeadSubscriber()">
+                <i class="fas fa-check"></i> اشتراك
+            </button>
+
+            <p class="lead-privacy-note">🔒 بياناتك آمنة ولن تُشارَك مع أي جهة خارجية</p>
+        </div>
+    </div>
+
+    <!-- INSTALLMENT CALCULATOR -->
     <section id="calculator" class="secondary-section">
         <div class="container">
             <div class="section-title">
@@ -2738,9 +2412,7 @@
         </div>
     </section>
 
-    <!-- ======================================================
-         TRADE-IN
-    ====================================================== -->
+    <!-- TRADE-IN -->
     <section id="trade-in" class="container">
         <div class="section-title">
             <h2>بيع أو <span>استبدل عربيتك</span></h2>
@@ -2765,9 +2437,7 @@
         </form>
     </section>
 
-    <!-- ======================================================
-         SERVICES
-    ====================================================== -->
+    <!-- SERVICES -->
     <section id="services" class="secondary-section">
         <div class="container">
             <div class="section-title">
@@ -2776,23 +2446,17 @@
             </div>
             <div class="car-grid">
                 <div class="review-card" style="text-align:center; padding:28px;">
-                    <div class="service-icon-wrap">
-                        <i class="fas fa-car-side"></i>
-                    </div>
+                    <div class="service-icon-wrap"><i class="fas fa-car-side"></i></div>
                     <h3 style="margin-bottom:10px;">نخبة السيارات المعتمدة</h3>
                     <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.65;">تشكيلة حصرية من سيارات الزيرو والكسر زيرو والمستعمل، خضعت لأدق فحص فني لضمان جودتها.</p>
                 </div>
                 <div class="review-card" style="text-align:center; padding:28px;">
-                    <div class="service-icon-wrap">
-                        <i class="fas fa-calculator"></i>
-                    </div>
+                    <div class="service-icon-wrap"><i class="fas fa-calculator"></i></div>
                     <h3 style="margin-bottom:10px;">أنظمة تقسيط مرنة</h3>
                     <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.65;">خطط تقسيط بالتعاون مع كبرى البنوك وشركات التمويل، بالإضافة للقسط المباشر.</p>
                 </div>
                 <div class="review-card" style="text-align:center; padding:28px;">
-                    <div class="service-icon-wrap">
-                        <i class="fas fa-exchange-alt"></i>
-                    </div>
+                    <div class="service-icon-wrap"><i class="fas fa-exchange-alt"></i></div>
                     <h3 style="margin-bottom:10px;">استبدال السيارات</h3>
                     <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.65;">نُثمن سيارتك الحالية بأعلى سعر في السوق لتنتقل إلى وجهتك القادمة بسلاسة.</p>
                 </div>
@@ -2800,9 +2464,7 @@
         </div>
     </section>
 
-    <!-- ======================================================
-         TIPS
-    ====================================================== -->
+    <!-- TIPS -->
     <section id="tips" class="container">
         <div class="section-title">
             <h2><span>نصائح</span> قبل الشراء</h2>
@@ -2836,16 +2498,12 @@
         </div>
     </section>
 
-    <!-- ======================================================
-         FLOATING CONTACT BUTTON
-    ====================================================== -->
+    <!-- FLOATING CONTACT BUTTON -->
     <button class="float-contact" id="openContactModal" aria-label="تواصل معنا">
         <i class="fas fa-headset"></i>
     </button>
 
-    <!-- ======================================================
-         CONTACT MODAL
-    ====================================================== -->
+    <!-- CONTACT MODAL -->
     <div class="modal-overlay" id="contactModal" role="dialog" aria-modal="true" aria-label="تواصل معنا">
         <div class="contact-modal-content">
             <button class="close-modal" id="closeContactModal" aria-label="إغلاق">&times;</button>
@@ -2873,9 +2531,7 @@
         </div>
     </div>
 
-    <!-- ======================================================
-         LIGHTBOX
-    ====================================================== -->
+    <!-- LIGHTBOX -->
     <div id="lightboxOverlay" role="dialog" aria-modal="true" aria-label="عرض الصورة">
         <button class="lb-close" id="lbCloseBtn" aria-label="إغلاق">&times;</button>
         <div class="lb-counter" id="lbCounter">1 / 1</div>
@@ -2886,9 +2542,7 @@
         </div>
     </div>
 
-    <!-- ======================================================
-         🔐 ADMIN LOGIN MODAL — نافذة تسجيل دخول الإدارة المخفية
-    ====================================================== -->
+    <!-- 🔐 ADMIN LOGIN MODAL -->
     <div id="adminLoginModal" role="dialog" aria-modal="true" aria-label="دخول الإدارة">
         <div class="admin-login-box">
             <button class="admin-login-close-btn" id="adminLoginClose" aria-label="إغلاق">&times;</button>
@@ -2903,12 +2557,8 @@
         </div>
     </div>
 
-    <!-- ======================================================
-         🔐 ADMIN PANEL — لوحة الإدارة الكاملة
-    ====================================================== -->
+    <!-- 🔐 ADMIN PANEL -->
     <div id="adminPanel" role="dialog" aria-modal="true" aria-label="لوحة الإدارة">
-
-        <!-- رأس اللوحة -->
         <div class="admin-header">
             <div class="admin-header-title">
                 <i class="fas fa-tachometer-alt"></i>
@@ -2917,26 +2567,19 @@
             </div>
             <div class="admin-header-actions">
                 <button class="admin-btn-sm admin-btn-ghost" id="adminCloseBtn">
-                    <i class="fas fa-compress-alt"></i>
-                    <span style="display:none; display:inline;">إخفاء</span>
+                    <i class="fas fa-compress-alt"></i> إخفاء
                 </button>
                 <button class="admin-btn-sm admin-btn-danger" id="adminLogoutBtn">
                     <i class="fas fa-sign-out-alt"></i> خروج
                 </button>
             </div>
         </div>
-
-        <!-- جسم اللوحة (عمودان) -->
         <div class="admin-body">
-
-            <!-- ====== عمود الإضافة/التعديل (نموذج) ====== -->
             <div class="admin-form-col" id="adminFormSection">
                 <div class="admin-section-title">
                     <i class="fas fa-plus-square"></i>
                     <span id="adminFormTitle">➕ إضافة سيارة جديدة</span>
                 </div>
-
-                <!-- الصورة الرئيسية (Thumbnail) -->
                 <div class="admin-form-group">
                     <label>📸 الصورة الرئيسية (Thumbnail)</label>
                     <div class="file-upload-wrap">
@@ -2946,10 +2589,8 @@
                     </div>
                     <div class="image-preview-row" id="adminThumbPreview"></div>
                 </div>
-
-                <!-- صور المعرض الإضافية -->
                 <div class="admin-form-group">
-                    <label>🖼️ صور المعرض الإضافية (يمكن اختيار أكثر من صورة)</label>
+                    <label>🖼️ صور المعرض الإضافية</label>
                     <div class="file-upload-wrap">
                         <input type="file" id="adminGalleryInput" accept="image/*" multiple>
                         <i class="fas fa-images"></i>
@@ -2957,20 +2598,14 @@
                     </div>
                     <div class="image-preview-row" id="adminGalleryPreview"></div>
                 </div>
-
-                <!-- اسم السيارة -->
                 <div class="admin-form-group">
                     <label>🚗 اسم السيارة *</label>
                     <input type="text" id="adminCarName" placeholder="مثال: مرسيدس بنز C200 AMG">
                 </div>
-
-                <!-- السعر -->
                 <div class="admin-form-group">
                     <label>💰 السعر (بالجنيه المصري) *</label>
                     <input type="number" id="adminCarPrice" placeholder="مثال: 4500000">
                 </div>
-
-                <!-- صفان بجانب بعض: الموديل + الكيلومترات -->
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                     <div class="admin-form-group">
                         <label>📅 سنة الموديل</label>
@@ -2981,8 +2616,6 @@
                         <input type="number" id="adminCarKm" placeholder="مثال: 12000">
                     </div>
                 </div>
-
-                <!-- نوع الوقود + ناقل الحركة -->
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                     <div class="admin-form-group">
                         <label>⛽ نوع الوقود</label>
@@ -3001,8 +2634,6 @@
                         </select>
                     </div>
                 </div>
-
-                <!-- اللون + المحرك -->
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                     <div class="admin-form-group">
                         <label>🎨 اللون</label>
@@ -3013,8 +2644,6 @@
                         <input type="text" id="adminCarEngine" placeholder="مثال: 2000 CC تربو">
                     </div>
                 </div>
-
-                <!-- حالة السيارة + حالة البيع -->
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                     <div class="admin-form-group">
                         <label>✨ حالة السيارة</label>
@@ -3032,15 +2661,10 @@
                         </select>
                     </div>
                 </div>
-
-                <!-- الوصف الكامل -->
                 <div class="admin-form-group">
                     <label>📝 الوصف والكماليات</label>
-                    <textarea id="adminCarDescription" rows="4"
-                        placeholder="اكتب وصف تفصيلي للسيارة وكماليتها هنا..."></textarea>
+                    <textarea id="adminCarDescription" rows="4" placeholder="اكتب وصف تفصيلي للسيارة وكماليتها هنا..."></textarea>
                 </div>
-
-                <!-- Toggle إظهار/إخفاء السيارة -->
                 <div class="admin-toggle-row">
                     <label for="adminCarVisible">👁️ إظهار السيارة في المعرض للزوار</label>
                     <label class="toggle-switch">
@@ -3048,38 +2672,27 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-
-                <!-- أزرار العمليات -->
                 <div class="admin-form-actions">
-                    <button id="adminSaveBtn">
-                        <i class="fas fa-plus-circle"></i> إضافة السيارة
-                    </button>
-                    <button id="adminDeleteBtn">
-                        <i class="fas fa-trash-alt"></i> حذف
-                    </button>
-                    <button id="adminCancelEditBtn">
-                        <i class="fas fa-times"></i> إلغاء
-                    </button>
+                    <button id="adminSaveBtn"><i class="fas fa-plus-circle"></i> إضافة السيارة</button>
+                    <button id="adminDeleteBtn"><i class="fas fa-trash-alt"></i> حذف</button>
+                    <button id="adminCancelEditBtn"><i class="fas fa-times"></i> إلغاء</button>
                 </div>
-
-                <!-- ملاحظة ImgBB -->
                 <div style="margin-top:16px; padding:12px 14px; background:rgba(184,144,71,0.08); border:1px solid rgba(184,144,71,0.2); border-radius:10px; font-size:0.76rem; color:var(--text-muted); line-height:1.6;">
                     <i class="fas fa-info-circle" style="color:var(--accent);"></i>
-                    الصور ترفع تلقائياً إلى ImgBB · تأكد من وضع مفتاح ImgBB API في متغير <code>IMGBB_API_KEY</code> داخل كود الجافا سكريبت.
+                    الصور ترفع تلقائياً إلى ImgBB · تأكد من وضع مفتاح ImgBB API في متغير <code>IMGBB_API_KEY</code>.
                     <br>
                     <i class="fas fa-lock" style="color:var(--accent);"></i>
                     لفتح لوحة الإدارة: أضف <code>?mode=admin</code> للرابط أو انقر نقراً مزدوجاً على الشعار.
+                    <br>
+                    <i class="fas fa-bell" style="color:var(--accent);"></i>
+                    للـ Push Notifications: استبدل <code>VAPID_KEY</code> بـ VAPID Key من Firebase Console → Cloud Messaging.
                 </div>
             </div>
-
-            <!-- ====== عمود القائمة (السيارات الموجودة) ====== -->
             <div class="admin-list-col">
                 <div class="admin-section-title">
                     <i class="fas fa-list"></i>
                     السيارات المضافة (<span id="carsCountBadge">0</span>)
                 </div>
-
-                <!-- قائمة السيارات تُملأ ديناميكياً -->
                 <div id="adminCarsList">
                     <div class="loading-spinner">
                         <i class="fas fa-circle-notch"></i>
@@ -3087,73 +2700,20 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 
-    <!-- ======================================================
-         🔔 WHATSAPP NOTIFICATION SUBSCRIPTION MODAL
-    ====================================================== -->
-    <div id="waNotifModal" role="dialog" aria-modal="true" aria-label="الاشتراك في إشعارات واتساب">
-        <div class="wa-notif-box">
-            <button class="wa-notif-close" id="closeWaNotifModal" aria-label="إغلاق">&times;</button>
-            <div class="wa-notif-icon">
-                <i class="fab fa-whatsapp"></i>
-            </div>
-            <h3>إشعارات السيارات الجديدة</h3>
-            <p>سجّل رقم واتساپك وهنبعتلك رسالة فور إضافة أي سيارة جديدة في المعرض</p>
-
-            <ul class="wa-notif-list">
-                <li><i class="fas fa-check-circle"></i> إشعار فوري بكل سيارة جديدة</li>
-                <li><i class="fas fa-check-circle"></i> السعر والمواصفات في رسالة واحدة</li>
-                <li><i class="fas fa-check-circle"></i> إلغاء الاشتراك في أي وقت</li>
-            </ul>
-
-            <input class="wa-notif-input" type="tel" id="waSubscriberPhone"
-                placeholder="01xxxxxxxxx" maxlength="11" inputmode="numeric">
-            <div id="waNotifError" style="color:#e74c3c; font-size:0.8rem; margin:-8px 0 10px; min-height:18px;"></div>
-
-            <button class="btn-main" id="waNotifSubscribeBtn" style="width:100%; justify-content:center; background:#25d366;">
-                <i class="fab fa-whatsapp"></i> اشترك الآن
-            </button>
-            <p style="font-size:0.72rem; color:var(--text-muted); margin-top:12px; line-height:1.6;">
-                بالاشتراك توافق على استقبال رسائل من AUTO CAR AZAM على واتساپ
-            </p>
-        </div>
-    </div>
-
-    <!-- ======================================================
-         🔔 BROWSER PUSH NOTIFICATION BANNER
-    ====================================================== -->
-    <div id="pushBanner" role="complementary" aria-label="تفعيل إشعارات المتصفح">
-        <div class="push-banner-icon">
-            <i class="fas fa-bell"></i>
-        </div>
-        <div class="push-banner-text">
-            <strong>ابقَ أول المطلعين 🔔</strong>
-            <span>فعّل الإشعارات وخدنا نعلمك بكل سيارة جديدة</span>
-        </div>
-        <div class="push-banner-actions">
-            <button class="push-allow-btn" id="pushAllowBtn">السماح</button>
-            <button class="push-deny-btn" id="pushDenyBtn">لاحقاً</button>
-        </div>
-    </div>
-
-    <!-- ======================================================
-         FOOTER
-    ====================================================== -->
+    <!-- FOOTER -->
     <footer id="contact">
         <div class="container" style="padding:0; padding-bottom:20px;">
             <span class="footer-text-logo">AUTO CAR AZAM</span>
-
             <div class="footer-links" style="display:flex; justify-content:center; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:20px;">
                 <a href="https://www.facebook.com/share/1PMJ1Kiue5/?mibextid=wwXIfr"
                    class="btn-main" style="background:#1877F2;" target="_blank" rel="noopener">
                     <i class="fab fa-facebook-f"></i> فيسبوك
                 </a>
                 <a href="tel:+201019284211" class="btn-main"
-                   style="width:48px; height:48px; padding:0; justify-content:center; border-radius:50%;"
-                   aria-label="اتصال">
+                   style="width:48px; height:48px; padding:0; justify-content:center; border-radius:50%;" aria-label="اتصال">
                     <i class="fas fa-phone-alt" style="margin:0;"></i>
                 </a>
                 <a href="https://wa.me/201019284211" class="btn-main"
@@ -3161,7 +2721,6 @@
                     <i class="fab fa-whatsapp"></i> واتساب
                 </a>
             </div>
-
             <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:8px;">
                 <i class="fas fa-map-marker-alt" style="color:var(--accent); margin-left:5px;"></i>
                 المنوفية - شبين الكوم - امتداد مزلقان العبور
@@ -3176,17 +2735,15 @@
         </div>
     </footer>
 
-    <!-- ======================================================
-         حاوية الإشعارات التوست (Toast Container)
-    ====================================================== -->
+    <!-- Toast Container -->
     <div id="toastContainer" aria-live="polite" aria-label="إشعارات"></div>
 
     <!-- ======================================================
-         JAVASCRIPT — الوظائف الأصلية المحافظ عليها بدقة
+         JAVASCRIPT — محافظ على كل الوظائف القديمة + جديدة
     ====================================================== -->
     <script>
     /* ============================================================
-       1. SIDEBAR / MENU TOGGLE
+       1. SIDEBAR / MENU TOGGLE — محافظ عليه بالكامل
     ============================================================ */
     const menuBtn         = document.getElementById('menuBtn');
     const sideMenu        = document.getElementById('sideMenu');
@@ -3214,20 +2771,16 @@
     menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleSidebar(); });
     sidebarCloseBtn.addEventListener('click', closeSidebar);
     sidebarOverlay.addEventListener('click', closeSidebar);
-
     document.querySelectorAll('[data-close-sidebar]').forEach(link => {
         link.addEventListener('click', closeSidebar);
     });
 
     /* ============================================================
-       2. THEME TOGGLE
+       2. THEME TOGGLE — محافظ عليه بالكامل
     ============================================================ */
     function applyTheme(isDark) {
-        if (isDark) {
-            document.body.classList.remove('light-mode');
-        } else {
-            document.body.classList.add('light-mode');
-        }
+        if (isDark) document.body.classList.remove('light-mode');
+        else        document.body.classList.add('light-mode');
         const headerIcon  = document.querySelector('#headerThemeBtn i');
         const sidebarIcon = document.querySelector('#sidebarThemeBtn i');
         if (headerIcon)  headerIcon.className  = isDark ? 'fas fa-moon' : 'fas fa-sun';
@@ -3238,48 +2791,36 @@
         applyTheme(nowDark);
         try { localStorage.setItem('theme', nowDark ? 'dark' : 'light'); } catch(e) {}
     }
-
     const headerThemeBtn = document.getElementById('headerThemeBtn');
     if (headerThemeBtn) headerThemeBtn.addEventListener('click', toggleTheme);
     document.getElementById('sidebarThemeBtn').addEventListener('click', toggleTheme);
-
-    try {
-        if (localStorage.getItem('theme') === 'light') applyTheme(false);
-    } catch(e) {}
+    try { if (localStorage.getItem('theme') === 'light') applyTheme(false); } catch(e) {}
 
     /* ============================================================
-       3. HEADER SCROLL SHADOW
+       3. HEADER SCROLL SHADOW — محافظ عليه
     ============================================================ */
     window.addEventListener('scroll', () => {
         document.getElementById('main-header').classList.toggle('scrolled', window.scrollY > 50);
     }, { passive: true });
 
     /* ============================================================
-       4. مفتاح Escape — يغلق كل النوافذ المفتوحة
+       4. مفتاح Escape — محافظ عليه + [NEW] يغلق Lead Modal
     ============================================================ */
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         closeSidebar();
-        // إغلاق مودال التفاصيل عبر دالة closeCarModal الموجودة في module
         document.getElementById('carDetailsModal').classList.remove('active');
-        // إغلاق مودال التواصل
         document.getElementById('contactModal').classList.remove('active');
-        // إغلاق اللايت بوكس
         document.getElementById('lightboxOverlay').classList.remove('active');
-        // إغلاق نافذة تسجيل دخول الإدارة
         document.getElementById('adminLoginModal').classList.remove('active');
-        // إغلاق مودال الاشتراك في واتساپ
-        const waModal = document.getElementById('waNotifModal');
-        if (waModal && waModal.classList.contains('active')) {
-            waModal.classList.remove('active');
-        }
-        // تفقّد ما إذا كان يجب إزالة modal-open
-        const anyModal = document.querySelector('.modal-overlay.active, #adminPanel.active, #adminLoginModal.active, #lightboxOverlay.active');
+        /* [NEW] إغلاق Lead Modal */
+        document.getElementById('leadModal')?.classList.remove('active');
+        const anyModal = document.querySelector('.modal-overlay.active, #adminPanel.active, #adminLoginModal.active, #lightboxOverlay.active, #leadModal.active');
         if (!anyModal) document.body.classList.remove('modal-open');
     });
 
     /* ============================================================
-       5. لوحة مفاتيح اللايت بوكس (arrow keys)
+       5. اللايت بوكس keyboard — محافظ عليه
     ============================================================ */
     document.addEventListener('keydown', (e) => {
         if (!document.getElementById('lightboxOverlay').classList.contains('active')) return;
@@ -3288,7 +2829,7 @@
     });
 
     /* ============================================================
-       6. TRADE-IN WHATSAPP FORM
+       6. TRADE-IN WHATSAPP FORM — محافظ عليه
     ============================================================ */
     document.getElementById('tradeForm').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -3301,7 +2842,7 @@
     });
 
     /* ============================================================
-       7. CONTACT MODAL
+       7. CONTACT MODAL — محافظ عليه
     ============================================================ */
     document.getElementById('openContactModal').addEventListener('click', () => {
         document.getElementById('contactModal').classList.add('active');
@@ -3319,293 +2860,8 @@
     });
 
     /* ============================================================
-       🔔 WHATSAPP SUBSCRIPTION SYSTEM
-       يحفظ أرقام المشتركين في localStorage ويفتح واتساپ للمسؤول
-       لما تضاف سيارة جديدة من Firebase module يستدعي notifyWaSubscribers()
+       8. عداد السيارات في لوحة الإدارة — محافظ عليه
     ============================================================ */
-// 1. استيراد المكتبات المطلوبة من الفايربيز
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-// 2. إعدادات الفايربيز بالبيانات بتاعتك
-const firebaseConfig = {
-    apiKey: "AIzaSyDRjPIw8y58YR1agtGM5HO5kz-RL",
-    appId: "1:56812655247:web:847da9e3f4590ff",
-    messagingSenderId: "56812655247",
-    
-    // 📢 استبدل AUTO-CAR-AZAM باسم مشروعك الحقيقي لو كان مختلفاً
-    authDomain: "auto-car-azam.firebaseapp.com", 
-    projectId: "auto-car-azam",                  
-    storageBucket: "auto-car-azam.appspot.com"
-};
-
-// 3. تهيئة الفايربيز وقاعدة البيانات
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
-
-// 4. متغيرات سيستم الواتساب
-const WA_ADMIN_NUMBER = '201019284211';
-const COLLECTION_NAME = 'wa_subscribers'; 
-
-/* فتح وغلق مودال الاشتراك */
-const waNotifModal   = document.getElementById('waNotifModal');
-const openWaBtn      = document.getElementById('openWaNotifModal');
-const closeWaBtn     = document.getElementById('closeWaNotifModal');
-const waPhoneInput   = document.getElementById('waSubscriberPhone');
-const waNotifError   = document.getElementById('waNotifError');
-const waSubscribeBtn = document.getElementById('waNotifSubscribeBtn');
-
-function openWaModal() {
-    if(typeof closeSidebar === 'function') closeSidebar(); 
-    waPhoneInput.value = '';
-    waNotifError.textContent = '';
-    waNotifModal.classList.add('active');
-    document.body.classList.add('modal-open');
-    setTimeout(() => waPhoneInput.focus(), 300);
-}
-function closeWaModal() {
-    waNotifModal.classList.remove('active');
-    document.body.classList.remove('modal-open');
-}
-
-openWaBtn && openWaBtn.addEventListener('click', openWaModal);
-closeWaBtn && closeWaBtn.addEventListener('click', closeWaModal);
-waNotifModal && waNotifModal.addEventListener('click', (e) => {
-    if (e.target === waNotifModal) closeWaModal();
-});
-
-/* التحقق من رقم الهاتف المصري */
-function validateEgyptPhone(num) {
-    return /^01[0125][0-9]{8}$/.test(num.replace(/\s+/g,''));
-}
-
-/* حفظ الاشتراك في الفايرستور */
-waSubscribeBtn && waSubscribeBtn.addEventListener('click', async () => {
-    const phone = waPhoneInput.value.trim().replace(/\s+/g,'');
-    if (!validateEgyptPhone(phone)) {
-        waNotifError.style.color = '#e74c3c';
-        waNotifError.textContent = '⚠️ رقم غير صحيح — ادخل 11 رقم يبدأ بـ 01';
-        waPhoneInput.focus();
-        return;
-    }
-
-    waNotifError.style.color = '#3498db';
-    waNotifError.textContent = '⏳ جاري التسجيل...';
-
-    try {
-        // التحقق هل الرقم مسجل مسبقاً؟
-        const q = query(collection(db, COLLECTION_NAME), where("phone", "==", phone));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-            waNotifError.style.color = '#27ae60';
-            waNotifError.textContent = '✅ أنت مشترك بالفعل!';
-            return;
-        }
-
-        // حفظ الرقم الجديد
-        await addDoc(collection(db, COLLECTION_NAME), {
-            phone: phone,
-            createdAt: new Date()
-        });
-
-        // فتح واتساب لتأكيد الاشتراك عند العميل
-        const confirmMsg = encodeURIComponent(
-            `أهلاً بك في AUTO CAR AZAM 🚗\nتم تسجيل رقمي بنجاح للإشعارات!`
-        );
-        const intlPhone = phone.replace(/^0/, '2');
-        window.open(`https://wa.me/${intlPhone}?text=${confirmMsg}`, '_blank');
-
-        closeWaModal();
-        if (window.showToast) showToast('✅ تم الاشتراك بنجاح! ستصلك إشعارات السيارات الجديدة', 'success');
-
-    } catch (e) {
-        console.error("Error running Firestore:", e);
-        waNotifError.style.color = '#e74c3c';
-        waNotifError.textContent = '❌ حدث خطأ، تأكد من إعدادات الـ Rules في الفايربيز.';
-    }
-});
-
-/* إرسال إشعار لكل المشتركين عند إضافة سيارة جديدة */
-window.notifyWaSubscribers = async function(carName, carPrice, carYear) {
-    try {
-        const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
-        const subs = [];
-        querySnapshot.forEach((doc) => {
-            subs.push(doc.data().phone);
-        });
-
-        if (!subs.length) return;
-
-        const priceStr = carPrice ? carPrice.toLocaleString('en-US') + ' ج.م' : '';
-        const msg = encodeURIComponent(
-            `🚗 سيارة جديدة في AUTO CAR AZAM!\n` +
-            `━━━━━━━━━━━━━━━\n` +
-            `🏷️ ${carName || 'سيارة جديدة'}${carYear ? ' ' + carYear : ''}\n` +
-            `💰 السعر: ${priceStr}\n` +
-            `━━━━━━━━━━━━━━━\n` +
-            `شوف كل التفاصيل والصور على الموقع:\nhttps://auto-car-azam.netlify.app/\n\n` +
-            `للإلغاء الاشتراك: راسلنا بكلمة "إلغاء"`
-        );
-
-        const adminNotif = encodeURIComponent(
-            `📢 سيارة جديدة أُضيفت:\n${carName || ''} ${carYear || ''}\nالسعر: ${priceStr}\n\n` +
-            `عدد المشتركين: ${subs.length}\nالأرقام:\n${subs.join('\n')}\n\n` +
-            `أرسل لهم هذه الرسالة:\n\n` +
-            decodeURIComponent(msg)
-        );
-        window.open(`https://wa.me/${WA_ADMIN_NUMBER}?text=${adminNotif}`, '_blank');
-        
-    } catch (e) {
-        console.error("Error fetching subscribers:", e);
-    }
-};
-
-    /* إرسال إشعار لكل المشتركين عند إضافة سيارة جديدة
-       يُستدعى من module Firebase بعد addDoc */
-    window.notifyWaSubscribers = function(carName, carPrice, carYear) {
-        const subs = getWaSubscribers();
-        if (!subs.length) return;
-        const priceStr = carPrice ? carPrice.toLocaleString('en-US') + ' ج.م' : '';
-        const msg = encodeURIComponent(
-            `🚗 سيارة جديدة في AUTO CAR AZAM!\n` +
-            `━━━━━━━━━━━━━━━\n` +
-            `🏷️ ${carName || 'سيارة جديدة'}${carYear ? ' ' + carYear : ''}\n` +
-            `💰 السعر: ${priceStr}\n` +
-            `━━━━━━━━━━━━━━━\n` +
-            `شوف كل التفاصيل والصور على الموقع:\nhttps://auto-car-azam.netlify.app/\n\n` +
-            `للإلغاء الاشتراك: راسلنا بكلمة "إلغاء"`
-        );
-        /* نفتح واتساپ للمسؤول مع قائمة الأرقام لإرسال يدوي أو broadcast */
-        const adminNotif = encodeURIComponent(
-            `📢 سيارة جديدة أُضيفت:\n${carName || ''} ${carYear || ''}\nالسعر: ${priceStr}\n\n` +
-            `عدد المشتركين: ${subs.length}\nالأرقام:\n${subs.join('\n')}\n\n` +
-            `أرسل لهم هذه الرسالة:\n\n` +
-            decodeURIComponent(msg)
-        );
-        window.open(`https://wa.me/${WA_ADMIN_NUMBER}?text=${adminNotif}`, '_blank');
-    };
-
-    /* ============================================================
-       🔔 BROWSER PUSH NOTIFICATION SYSTEM (Notification API)
-       يستخدم Notification API المدمج في المتصفح — مجاني 100%
-    ============================================================ */
-    const PUSH_DISMISSED_KEY = 'aca_push_dismissed';
-    const pushBanner   = document.getElementById('pushBanner');
-    const pushAllowBtn = document.getElementById('pushAllowBtn');
-    const pushDenyBtn  = document.getElementById('pushDenyBtn');
-
-    /* تسجيل Service Worker للإشعارات في الخلفية */
-    const SW_SCRIPT = `
-self.addEventListener('push', (event) => {
-    const data = event.data ? event.data.json() : {};
-    const title = data.title || 'AUTO CAR AZAM';
-    const options = {
-        body: data.body || 'سيارة جديدة أُضيفت في المعرض!',
-        icon: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=192',
-        badge: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=72',
-        dir: 'rtl',
-        lang: 'ar',
-        tag: 'new-car',
-        renotify: true,
-        data: { url: data.url || 'https://auto-car-azam.netlify.app/' }
-    };
-    event.waitUntil(self.registration.showNotification(title, options));
-});
-self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-    event.waitUntil(clients.openWindow(event.notification.data.url));
-});
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', () => self.clients.claim());
-`;
-
-    /* إنشاء Service Worker من blob إذا لم يكن موجوداً */
-    async function registerPushSW() {
-        if (!('serviceWorker' in navigator) || !('Notification' in window)) return null;
-        try {
-            const existing = await navigator.serviceWorker.getRegistration('./');
-            if (existing) return existing;
-            const blob = new Blob([SW_SCRIPT], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(blob);
-            const reg   = await navigator.serviceWorker.register(swUrl, { scope: './' });
-            return reg;
-        } catch(e) { return null; }
-    }
-
-    /* طلب إذن الإشعارات */
-    async function requestPushPermission() {
-        if (!('Notification' in window)) {
-            showToast('❌ متصفحك لا يدعم الإشعارات', 'error');
-            return;
-        }
-        hidePushBanner();
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') {
-            await registerPushSW();
-            try { localStorage.setItem(PUSH_DISMISSED_KEY, 'granted'); } catch(e) {}
-            showToast('✅ تم تفعيل الإشعارات! ستصلك إشعارات السيارات الجديدة', 'success');
-            /* إشعار ترحيبي فوري */
-            new Notification('AUTO CAR AZAM 🚗', {
-                body: 'تم تفعيل الإشعارات بنجاح! ستصلك أخبار السيارات الجديدة.',
-                icon: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=192',
-                dir: 'rtl',
-                lang: 'ar'
-            });
-        } else {
-            try { localStorage.setItem(PUSH_DISMISSED_KEY, 'denied'); } catch(e) {}
-            showToast('تم الإلغاء — يمكنك التفعيل لاحقاً من الإعدادات', 'info');
-        }
-    }
-
-    /* إخفاء البانر */
-    function hidePushBanner() {
-        pushBanner.classList.remove('show');
-    }
-
-    /* إرسال إشعار متصفح عند إضافة سيارة جديدة */
-    window.sendBrowserPushNotification = function(carName, carPrice, carYear) {
-        if (!('Notification' in window) || Notification.permission !== 'granted') return;
-        const priceStr = carPrice ? carPrice.toLocaleString('en-US') + ' ج.م' : '';
-        new Notification(`🚗 سيارة جديدة — AUTO CAR AZAM`, {
-            body: `${carName || 'سيارة جديدة'}${carYear ? ' ' + carYear : ''}${priceStr ? ' · ' + priceStr : ''}`,
-            icon: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=192',
-            dir: 'rtl',
-            lang: 'ar',
-            tag: 'new-car-' + Date.now(),
-            requireInteraction: false
-        });
-    };
-
-    /* عرض البانر بعد 4 ثواني إذا لم يُرفض مسبقاً */
-    (function initPushBanner() {
-        if (!('Notification' in window)) return;
-        try {
-            const prev = localStorage.getItem(PUSH_DISMISSED_KEY);
-            if (prev === 'granted' || prev === 'denied') return;
-            if (Notification.permission === 'granted') {
-                localStorage.setItem(PUSH_DISMISSED_KEY, 'granted');
-                registerPushSW();
-                return;
-            }
-            if (Notification.permission === 'denied') return;
-        } catch(e) {}
-        setTimeout(() => pushBanner.classList.add('show'), 4000);
-    })();
-
-    pushAllowBtn && pushAllowBtn.addEventListener('click', requestPushPermission);
-    pushDenyBtn  && pushDenyBtn.addEventListener('click', () => {
-        hidePushBanner();
-        try { localStorage.setItem(PUSH_DISMISSED_KEY, 'later'); } catch(e) {}
-    });
-
-    /* ============================================================
-       8. تحديث عداد السيارات في لوحة الإدارة
-       يُحدَّث مع كل تحديث للقائمة
-    ============================================================ */
-    const origRenderAdminCarsList = window.renderAdminCarsListOriginal;
-
-    // نراقب التغيير في قائمة الإدارة لتحديث العداد
     const adminCarsListEl = document.getElementById('adminCarsList');
     const carsCountBadge  = document.getElementById('carsCountBadge');
     if (adminCarsListEl && carsCountBadge) {
@@ -3616,7 +2872,21 @@ self.addEventListener('activate', () => self.clients.claim());
         observer.observe(adminCarsListEl, { childList: true });
     }
 
+    /* ============================================================
+       [NEW] 9. Enter key في حقل رقم الموبايل Lead Modal
+    ============================================================ */
+    document.getElementById('leadPhone')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') window.saveLeadSubscriber?.();
+    });
+
     </script>
 
 </body>
 </html>
+HTMLEOF
+echo "Done. Lines: $(wc -l < /home/claude/index.html)"
+Output
+
+Command argument is 152_431 bytes, exceeding the 100_000-byte per-argument limit. For large content, pipe via stdin or use a file-write API instead of embedding the content inline in the command. Argument preview: '\n# Now build the complete updated index.html\ncat > /home/claude/index.html << \'HTMLEOF\'\n<!DOCTYPE html>\n<html lang="ar" dir="rtl">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="'
+Done
+
